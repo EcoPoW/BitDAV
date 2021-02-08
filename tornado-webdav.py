@@ -22,14 +22,28 @@ OS X; use the Terminal as a workaround.
 """
 
 from tornado import httpserver, ioloop, wsgi
-from wsgidav.server import run_server
+from wsgidav import wsgidav_app
+from wsgidav.fs_dav_provider import FilesystemProvider
 
 def run():
-    config = run_server._initConfig()
-    app = run_server.WsgiDAVApp(config)
-    server = httpserver.HTTPServer(wsgi.WSGIContainer(app))
-    server.listen(config['port'])
-    ioloop.IOLoop.instance().start()
+   #  config = wsgidav_app._initConfig()
+   provider = FilesystemProvider('.')
+   config = {
+      "provider_mapping": {"/": provider},
+      "http_authenticator": {
+         "domain_controller": None  # None: dc.simple_dc.SimpleDomainController(user_mapping)
+      },
+      "simple_dc": {"user_mapping": {"*": True}},  # anonymous access
+      "verbose": 1,
+      "enable_loggers": [],
+      "property_manager": True,  # True: use property_manager.PropertyManager
+      "lock_manager": True,  # True: use lock_manager.LockManager
+      "port": 8000
+   }
+   app = wsgidav_app.WsgiDAVApp(config)
+   server = httpserver.HTTPServer(wsgi.WSGIContainer(app))
+   server.listen(config['port'])
+   ioloop.IOLoop.instance().start()
 
 if __name__ == '__main__':
-    run()
+   run()
