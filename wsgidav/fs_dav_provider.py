@@ -96,6 +96,13 @@ class FileResource(DAVNonCollection):
         # GC issue 57: always store as binary
         return open(self._file_path, "wb", BUFFER_SIZE)
 
+    def end_write(self, with_errors):
+        """Called when PUT has finished writing.
+
+        This is only a notification. that MAY be handled.
+        """
+        print("FILE UPLOAD DONE")
+
     def delete(self):
         """Remove this resource or collection (recursive).
 
@@ -262,6 +269,7 @@ class FolderResource(DAVCollection):
         fp = self.provider._loc_to_file_path(path, self.environ)
         f = open(fp, "wb")
         f.close()
+        print("TOUCH")
         return self.provider.get_resource_inst(path, self.environ)
 
     def create_collection(self, name):
@@ -275,6 +283,7 @@ class FolderResource(DAVCollection):
         path = util.join_uri(self.path, name)
         fp = self.provider._loc_to_file_path(path, self.environ)
         os.mkdir(fp)
+        print("MKDIR")
 
     def delete(self):
         """Remove this resource or collection (recursive).
