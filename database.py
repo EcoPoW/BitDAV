@@ -26,10 +26,10 @@ def get_conn(current_name = None):
             )''')
 
         # Insert a row of data
-        c.execute("INSERT INTO chain(hash, prev_hash, height, timestamp, data) VALUES (?, ?, 0, CURRENT_TIMESTAMP, '{}')", (uuid.uuid4().hex, uuid.uuid4().hex))
+        # c.execute("INSERT INTO chain(hash, prev_hash, height, timestamp, data) VALUES (?, ?, 0, CURRENT_TIMESTAMP, '{}')", (uuid.uuid4().hex, uuid.uuid4().hex))
 
         # Save (commit) the changes
-        conn.commit()
+        # conn.commit()
 
         # We can also close the connection if we are done with it.
         # Just be sure any changes have been committed or they will be lost.
@@ -37,3 +37,4 @@ def get_conn(current_name = None):
 
     else:
         conn = sqlite3.connect('%s.db' % current_name)
+    return conn
