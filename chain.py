@@ -3,6 +3,9 @@ import os
 import argparse
 import uuid
 import time
+import hashlib
+import json
+import copy
 
 import tornado.web
 
@@ -77,14 +80,15 @@ def longest_chain(from_hash = '0'*64):
             if block_height % 1000 == 0:
                 print('longest height', block_height)
             for leaf in leaves:
-                for c in chains:
-                    prev_block = c[-1]
-                    prev_block_hash = prev_block[2]
+                for chain in chains:
+                    prev_block = chain[-1]
+                    prev_block_hash = prev_block[1]
+                    # print(prev_block_hash)
                     if prev_block_hash == prev_hash:
-                        chain = copy.copy(c)
+                        forking_chain = copy.copy(chain)
                         # chain.append(leaf.hash)
                         chain.append(leaf)
-                        chains.append(chain)
+                        chains.append(forking_chain)
                         break
                 leaf_hash = leaf[1]
                 if leaf_hash not in prev_hashs and leaf_hash:
@@ -101,12 +105,38 @@ def longest_chain(from_hash = '0'*64):
             longest = i
     return longest
 
-chain = longest_chain()
-print(chain)
+longest = longest_chain()
+print(longest)
 highest_block_hash = None
-if chain:
-    highest_block_hash = chain[0][1]
+if longest:
+    highest_block_hash = longest[0][1]
+else:
+    highest_block_hash = '0'*64
 print(highest_block_hash)
+
+names = {}
+for block in longest:
+    block_data_json = block[5]
+    block_data = json.loads(block_data_json)
+    print(block_data)
+    # print(names)
+    if block_data.get('type') == 'name':
+        name = block_data['name']
+        host = block_data['host']
+        port = block_data['port']
+        pk = block_data['pk']
+        if name:
+            names[name] = [host, port, pk]
+
+print(names)
+if current_name not in names:
+    block_data = {'type': 'name', 'name': current_name, 'host': current_host, 'port': current_port, 'timestamp': time.time(), 'pk': ''}
+    block_data_json = json.dumps(block_data)
+    height = str(len(longest))
+    digest = hashlib.sha256((highest_block_hash+height+block_data_json).encode('utf8'))
+
+    c.execute("INSERT INTO chain(hash, prev_hash, height, timestamp, data) VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?)", (digest.hexdigest(), highest_block_hash, height, block_data_json))
+    conn.commit()
 
 messages = []
 
