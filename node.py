@@ -21,6 +21,7 @@ There is a problem PUTing files to the WebDAV server using Finder in
 OS X; use the Terminal as a workaround.
 """
 
+import os
 import argparse
 import sqlite3
 import uuid
@@ -34,9 +35,7 @@ from wsgidav.fs_dav_provider import FilesystemProvider
 
 import ecdsa
 
-class TestHandler(tornado.web.RequestHandler):
-    def get(self):
-        self.finish('test')
+import chain
 
 
 def main():
@@ -55,45 +54,50 @@ def main():
     current_port = args.port
     print(current_name, current_host, current_port)
 
-    conn = sqlite3.connect('%s.db' % current_name)
-    c = conn.cursor()
+    if not os.path.exists('%s.db' % current_name):
+        conn = sqlite3.connect('%s.db' % current_name)
+        c = conn.cursor()
 
-    # Create table
-    c.execute('''CREATE TABLE "chain" (
-            "id"	INTEGER,
-            "hash"	TEXT NOT NULL,
-            "prev_hash"	TEXT NOT NULL,
-            "height"	INTEGER NOT NULL,
-            "timestamp"	INTEGER NOT NULL,
-            "data"	TEXT NOT NULL,
-            PRIMARY KEY("id" AUTOINCREMENT)
-        )''')
+        # Create table
+        c.execute('''CREATE TABLE "chain" (
+                "id"	INTEGER,
+                "hash"	TEXT NOT NULL,
+                "prev_hash"	TEXT NOT NULL,
+                "height"	INTEGER NOT NULL,
+                "timestamp"	INTEGER NOT NULL,
+                "data"	TEXT NOT NULL,
+                PRIMARY KEY("id" AUTOINCREMENT)
+            )''')
 
-    # Insert a row of data
-    c.execute("INSERT INTO chain(hash, prev_hash, height, timestamp, data) VALUES (?, ?, 0, CURRENT_TIMESTAMP, '{}')", (uuid.uuid4().hex, uuid.uuid4().hex))
+        # Insert a row of data
+        c.execute("INSERT INTO chain(hash, prev_hash, height, timestamp, data) VALUES (?, ?, 0, CURRENT_TIMESTAMP, '{}')", (uuid.uuid4().hex, uuid.uuid4().hex))
 
-    # Save (commit) the changes
-    conn.commit()
+        # Save (commit) the changes
+        conn.commit()
 
-    # We can also close the connection if we are done with it.
-    # Just be sure any changes have been committed or they will be lost.
-    conn.close()
+        # We can also close the connection if we are done with it.
+        # Just be sure any changes have been committed or they will be lost.
+        conn.close()
 
 
     sk_filename = "%s.pem" % current_name
-    sk = ecdsa.SigningKey.generate(curve=ecdsa.NIST256p)
-    open("./"+sk_filename, "w").write(bytes.decode(sk.to_pem()))
+    if os.path.exists(sk_filename):
+        pass
+    else:
+        sk = ecdsa.SigningKey.generate(curve=ecdsa.NIST256p)
+        open("./"+sk_filename, "w").write(bytes.decode(sk.to_pem()))
 
-    return
 
     #  config = wsgidav_app._initConfig()
     provider = FilesystemProvider('.')
     config = {
         "provider_mapping": {"/": provider},
         "http_authenticator": {
-        "domain_controller": None  # None: dc.simple_dc.SimpleDomainController(user_mapping)
+            "domain_controller": None  # None: dc.simple_dc.SimpleDomainController(user_mapping)
         },
-        "simple_dc": {"user_mapping": {"*": True}},  # anonymous access
+        "simple_dc": {
+            "user_mapping": {"*": True}
+        },  # anonymous access
         "verbose": 1,
         "enable_loggers": [],
         "property_manager": True,  # True: use property_manager.PropertyManager
@@ -102,8 +106,15 @@ def main():
     }
     wsgi_app = wsgidav_app.WsgiDAVApp(config)
     settings = {"debug": True}
-    application = tornado.web.Application([ ('/test', TestHandler),
-            ('.*', tornado.web.FallbackHandler, dict(fallback=tornado.wsgi.WSGIContainer(wsgi_app))),
+    application = tornado.web.Application([ (r'/\*gossip', chain.TestHandler),
+                                            # (r'/*join_request', chain.TestHandler),
+                                            # (r'/*join_approve', chain.TestHandler),
+                                            (r'/\*leave', chain.TestHandler),
+                                            (r'/\*invite', chain.TestHandler),
+                                            (r'/\*get_block', chain.TestHandler),
+                                            # ('/\*get_nodes', TestHandler),
+                                            ('/\*test', chain.TestHandler),
+            (r'.*', tornado.web.FallbackHandler, dict(fallback=tornado.wsgi.WSGIContainer(wsgi_app))),
         ], **settings)
 
     server = tornado.httpserver.HTTPServer(application)
