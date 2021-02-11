@@ -129,7 +129,21 @@ for block in longest:
             names[name] = [host, port, pk]
 
 print(names)
-if current_name not in names:
+if current_name in names:
+    host, port, pk = names[current_name]
+    if current_host is None:
+        current_host = host
+    else:
+        if current_host != host:
+            pass
+
+    if current_port is None:
+        current_port = port
+    else:
+        if current_port != port:
+            pass
+
+else:
     block_data = {'type': 'name', 'name': current_name, 'host': current_host, 'port': current_port, 'timestamp': time.time(), 'pk': ''}
     block_data_json = json.dumps(block_data)
     height = str(len(longest))
@@ -137,6 +151,9 @@ if current_name not in names:
 
     c.execute("INSERT INTO chain(hash, prev_hash, height, timestamp, data) VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?)", (digest.hexdigest(), highest_block_hash, height, block_data_json))
     conn.commit()
+
+print(current_host, current_port)
+
 
 messages = []
 
