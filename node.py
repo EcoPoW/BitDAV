@@ -22,72 +22,20 @@ OS X; use the Terminal as a workaround.
 """
 
 import os
-import argparse
-import sqlite3
-import uuid
 
 import tornado.web
 import tornado.httpserver
 import tornado.ioloop
 import tornado.wsgi
+
 from wsgidav import wsgidav_app
 from wsgidav.fs_dav_provider import FilesystemProvider
 
-import ecdsa
 
 import chain
 
 
 def main():
-    parser = argparse.ArgumentParser(description="node description")
-    parser.add_argument('--name')
-    parser.add_argument('--host', default=None)
-    parser.add_argument('--port', default=None)
-    # parser.add_argument('--parent_host', default="127.0.0.1")
-    # parser.add_argument('--parent_port', default=2018)
-    # parser.add_argument('--control_host')
-    # parser.add_argument('--control_port', default=setting.DASHBOARD_PORT)
-
-    args = parser.parse_args()
-    current_name = args.name
-    current_host = args.host
-    current_port = args.port
-    print(current_name, current_host, current_port)
-
-    if not os.path.exists('%s.db' % current_name):
-        conn = sqlite3.connect('%s.db' % current_name)
-        c = conn.cursor()
-
-        # Create table
-        c.execute('''CREATE TABLE "chain" (
-                "id"	INTEGER,
-                "hash"	TEXT NOT NULL,
-                "prev_hash"	TEXT NOT NULL,
-                "height"	INTEGER NOT NULL,
-                "timestamp"	INTEGER NOT NULL,
-                "data"	TEXT NOT NULL,
-                PRIMARY KEY("id" AUTOINCREMENT)
-            )''')
-
-        # Insert a row of data
-        c.execute("INSERT INTO chain(hash, prev_hash, height, timestamp, data) VALUES (?, ?, 0, CURRENT_TIMESTAMP, '{}')", (uuid.uuid4().hex, uuid.uuid4().hex))
-
-        # Save (commit) the changes
-        conn.commit()
-
-        # We can also close the connection if we are done with it.
-        # Just be sure any changes have been committed or they will be lost.
-        conn.close()
-
-
-    sk_filename = "%s.pem" % current_name
-    if os.path.exists(sk_filename):
-        pass
-    else:
-        sk = ecdsa.SigningKey.generate(curve=ecdsa.NIST256p)
-        open("./"+sk_filename, "w").write(bytes.decode(sk.to_pem()))
-
-
     #  config = wsgidav_app._initConfig()
     provider = FilesystemProvider('.')
     config = {
