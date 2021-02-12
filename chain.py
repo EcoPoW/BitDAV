@@ -27,7 +27,7 @@ args = parser.parse_args()
 current_name = args.name
 current_host = args.host
 current_port = args.port
-print(current_name, current_host, current_port)
+print('parser', current_name, current_host, current_port)
 
 conn = database.get_conn(current_name)
 c = conn.cursor()
@@ -105,6 +105,7 @@ def longest_chain(from_hash = '0'*64):
             longest = i
     return longest
 
+# frozen_block_hash = None
 longest = None
 def get_chain(reload=False):
     global longest
@@ -125,21 +126,58 @@ def latest_block_height():
         return longest[-1][3]
     return 0
 
-names = {}
-for block in get_chain():
-    block_data_json = block[5]
-    block_data = tornado.escape.json_decode(block_data_json)
-    print(block_data)
-    # print(names)
-    if block_data.get('type') == 'name':
-        name = block_data['name']
-        host = block_data['host']
-        port = block_data['port']
-        pk = block_data['pk']
-        if name:
-            names[name] = [host, port, pk]
+def update_chain(new_block_data):
+    global longest
+    conn = database.get_conn()
+    c = conn.cursor()
 
-print(names)
+    block_hash = latest_block_hash()
+    block_height = latest_block_height()
+    new_block_data_json = tornado.escape.json_encode(new_block_data)
+    digest = hashlib.sha256((block_hash+str(block_height)+new_block_data_json).encode('utf8'))
+    new_block_hash = digest.hexdigest()
+
+    c.execute("INSERT INTO chain(hash, prev_hash, height, timestamp, data) VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?)", (new_block_hash, block_hash, block_height+1, new_block_data_json))
+    conn.commit()
+    print(c.lastrowid)
+
+    c.execute("SELECT * FROM chain WHERE id = ?", (c.lastrowid, ))
+    block = c.fetchone()
+    longest.append(block)
+    return block
+
+@tornado.gen.coroutine
+def broadcast_block(new_block):
+    http_client = tornado.httpclient.AsyncHTTPClient()
+    for name, info in get_names().items():
+        host, port, pk = info
+        print('broadcast_block', host, port, name, current_name)
+        if name == current_name:
+            continue
+        response = yield http_client.fetch("http://%s:%s/*gossip" % (host, port), method='POST', request_timeout=10, body=tornado.escape.json_encode(new_block))
+
+# frozen_names = {}
+names = None
+def get_names(reload=False):
+    global names
+    if names or not reload:
+        names = {}
+        for block in get_chain():
+            block_data_json = block[5]
+            block_data = tornado.escape.json_decode(block_data_json)
+            print('get_names', block_data)
+            # print(names)
+            if block_data.get('type') == 'name':
+                name = block_data['name']
+                host = block_data['host']
+                port = block_data['port']
+                pk = block_data['pk']
+                if name:
+                    names[name] = [host, port, pk]
+    print('get_names', names)
+    return names
+
+get_names()
 update_host_or_port = False
 if current_name in names:
     host, port, pk = names[current_name]
@@ -157,32 +195,19 @@ if current_name in names:
 else:
     update_host_or_port = True
 
-def update_chain(new_block_data):
-    global longest
-    conn = database.get_conn()
-    c = conn.cursor()
+print('update_host_or_port', current_host, current_port)
 
-    block_hash = latest_block_hash()
-    block_height = latest_block_height()
-    new_block_data_json = tornado.escape.json_encode(new_block_data)
-    digest = hashlib.sha256((block_hash+str(block_height)+block_data_json).encode('utf8'))
-    new_block_hash = digest.hexdigest()
-
-    c.execute("INSERT INTO chain(hash, prev_hash, height, timestamp, data) VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?)", (new_block_hash, block_hash, block_height+1, new_block_data_json))
-    conn.commit()
-    print(c.lastrowid)
-    longest.append((c.lastrowid, new_block_hash, block_hash, block_height+1, '', block_data_json))
-
+# def update_host_or_port_callback():
 
 if update_host_or_port:
+    # tornado.ioloop.IOLoop.instance().add_callback(update_host_or_port_callback)
     block_data = {'type': 'name', 'name': current_name, 'host': current_host, 'port': current_port, 'timestamp': time.time(), 'pk': ''}
-    update_chain(block_data)
-
-print(current_host, current_port)
+    block = update_chain(block_data)
+    get_names(True)
+    broadcast_block(list(block))
 
 
 messages = []
-
 
 
 class TestHandler(tornado.web.RequestHandler):
@@ -199,12 +224,7 @@ class GossipHandler(tornado.web.RequestHandler):
         msg = tornado.escape.json_decode(msg_json)
         assert isinstance(msg, list)
 
-        # if msg[0] == 'INVITE':
-        #     pass
-        # elif msg[0] == 'INVITE_RSP':
-        #     pass
-
-        self.finish(msg)
+        self.finish({})
 
 
 class JoinRequestHandler(tornado.web.RequestHandler):
@@ -245,7 +265,8 @@ class InviteHandler(tornado.web.RequestHandler):
         response = yield http_client.fetch("http://%s:%s/*hello" % (host, port), method='POST', request_timeout=10, body=req_json)
         rsp = tornado.escape.json_decode(response.body)
         block_data = {'type': 'name', 'name': rsp['name'], 'host': host, 'port': port, 'timestamp': time.time(), 'pk': ''}
-        update_chain(block_data)
+        block = update_chain(block_data)
+        broadcast_block(list(block))
 
         self.finish({'addr':addr, 'messages': messages, 'name': rsp['name']})
 
@@ -281,13 +302,13 @@ class HelloHandler(tornado.web.RequestHandler):
             response = yield http_client.fetch("http://%s:%s/*get_block?hash=%s" % (host, port, block_hash), request_timeout=10)
             rsp = tornado.escape.json_decode(response.body)
             block = rsp['block']
-            block_height = block[3]
+            block_height = block[2]
 
-            c.execute("INSERT INTO chain(hash, prev_hash, height, timestamp, data) VALUES (?, ?, ?, ?, ?)", tuple(block[1:]))
+            c.execute("INSERT INTO chain(hash, prev_hash, height, timestamp, data) VALUES (?, ?, ?, ?, ?)", tuple(block))
 
             if block_height == 1:
                 break
-            block_hash = block[2]
+            block_hash = block[1]
         conn.commit()
         get_chain(True)
 
@@ -309,7 +330,7 @@ class GetBlockHandler(tornado.web.RequestHandler):
         block = c.fetchone()
         print('GetBlockHandler', block)
 
-        self.finish({'block': list(block)})
+        self.finish({'block': list(block[1:])})
 
     # def post(self):
     #     self.post()

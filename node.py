@@ -54,7 +54,7 @@ def main():
     }
     wsgi_app = wsgidav_app.WsgiDAVApp(config)
     settings = {"debug": True}
-    application = tornado.web.Application([ (r'/\*gossip', chain.TestHandler),
+    application = tornado.web.Application([ (r'/\*gossip', chain.GossipHandler),
                                             # (r'/*join_request', chain.TestHandler),
                                             # (r'/*join_approve', chain.TestHandler),
                                             (r'/\*leave', chain.LeaveHandler),
@@ -71,5 +71,5 @@ def main():
     tornado.ioloop.IOLoop.instance().start()
 
 if __name__ == '__main__':
-    print(chain.current_name, chain.current_host, chain.current_port)
+    print('node __main__', chain.current_name, chain.current_host, chain.current_port)
     main()
