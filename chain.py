@@ -129,21 +129,24 @@ for block in longest:
             names[name] = [host, port, pk]
 
 print(names)
+update_host_or_port = False
 if current_name in names:
     host, port, pk = names[current_name]
     if current_host is None:
         current_host = host
     else:
         if current_host != host:
-            pass
+            update_host_or_port = True
 
     if current_port is None:
         current_port = port
     else:
         if current_port != port:
-            pass
-
+            update_host_or_port = True
 else:
+    update_host_or_port = True
+
+if update_host_or_port:
     block_data = {'type': 'name', 'name': current_name, 'host': current_host, 'port': current_port, 'timestamp': time.time(), 'pk': ''}
     block_data_json = json.dumps(block_data)
     height = str(len(longest))
