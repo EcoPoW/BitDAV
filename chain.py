@@ -144,14 +144,14 @@ def update_chain(new_block_data):
     c.execute("SELECT * FROM chain WHERE id = ?", (c.lastrowid, ))
     block = c.fetchone()
     longest.append(block)
-    return block
+    return block[1:]
 
 @tornado.gen.coroutine
 def broadcast_block(new_block):
     http_client = tornado.httpclient.AsyncHTTPClient()
     for name, info in get_names().items():
         host, port, pk = info
-        print('broadcast_block', host, port, name, current_name)
+        print('broadcast_block', host, port, name, new_block)
         if name == current_name:
             continue
         response = yield http_client.fetch("http://%s:%s/*gossip" % (host, port), method='POST', request_timeout=10, body=tornado.escape.json_encode(new_block))
@@ -223,6 +223,12 @@ class GossipHandler(tornado.web.RequestHandler):
         msg_json = self.request.body
         msg = tornado.escape.json_decode(msg_json)
         assert isinstance(msg, list)
+
+        block = msg
+        conn = database.get_conn()
+        c = conn.cursor()
+        c.execute("INSERT INTO chain(hash, prev_hash, height, timestamp, data) VALUES (?, ?, ?, ?, ?)", tuple(block))
+        conn.commit()
 
         self.finish({})
 
