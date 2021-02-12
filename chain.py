@@ -106,7 +106,7 @@ def longest_chain(from_hash = '0'*64):
     return longest
 
 longest = longest_chain()
-print(longest)
+# print(longest)
 highest_block_hash = None
 if longest:
     highest_block_hash = longest[0][1]
@@ -146,14 +146,24 @@ if current_name in names:
 else:
     update_host_or_port = True
 
+def update_chain(block_data):
+    global highest_block_hash
+    conn = database.get_conn()
+    c = conn.cursor()
+
+    block_data_json = json.dumps(block_data)
+    block_height = longest[-1][3] if longest else 0
+    digest = hashlib.sha256((highest_block_hash+str(block_height)+block_data_json).encode('utf8'))
+    new_block_hash = digest.hexdigest()
+
+    c.execute("INSERT INTO chain(hash, prev_hash, height, timestamp, data) VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?)", (new_block_hash, highest_block_hash, block_height+1, block_data_json))
+    conn.commit()
+    highest_block_hash = new_block_hash
+
+
 if update_host_or_port:
     block_data = {'type': 'name', 'name': current_name, 'host': current_host, 'port': current_port, 'timestamp': time.time(), 'pk': ''}
-    block_data_json = json.dumps(block_data)
-    height = str(len(longest))
-    digest = hashlib.sha256((highest_block_hash+height+block_data_json).encode('utf8'))
-
-    c.execute("INSERT INTO chain(hash, prev_hash, height, timestamp, data) VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?)", (digest.hexdigest(), highest_block_hash, height, block_data_json))
-    conn.commit()
+    update_chain(block_data)
 
 print(current_host, current_port)
 
@@ -201,11 +211,11 @@ class InviteHandler(tornado.web.RequestHandler):
         addr = self.get_argument('addr')
 
         #fetch to get name and pk
+        assert ':' in addr
+        host, port = addr.split(':')
 
-        conn = database.get_conn()
-        c = conn.cursor()
-        c.execute("INSERT INTO chain(hash, prev_hash, height, timestamp, data) VALUES (?, ?, 0, CURRENT_TIMESTAMP, '{}')", (uuid.uuid4().hex, uuid.uuid4().hex))
-        conn.commit()
+        block_data = {'type': 'name', 'name': current_name+'2', 'host': host, 'port': port, 'timestamp': time.time(), 'pk': ''}
+        update_chain(block_data)
 
         self.finish({'addr':addr, 'messages': messages})
 
