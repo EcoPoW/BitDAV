@@ -105,8 +105,14 @@ def longest_chain(from_hash = '0'*64):
             longest = i
     return longest
 
-longest = longest_chain()
-# print(longest)
+longest = None
+def get_chain(reload=False):
+    global longest
+    if reload or not longest:
+        longest = longest_chain()
+    return longest
+    # print(longest)
+
 def latest_block_hash():
     global longest
     if longest:
@@ -120,7 +126,7 @@ def latest_block_height():
     return 0
 
 names = {}
-for block in longest:
+for block in get_chain():
     block_data_json = block[5]
     block_data = tornado.escape.json_decode(block_data_json)
     print(block_data)
@@ -269,20 +275,21 @@ class HelloHandler(tornado.web.RequestHandler):
         http_client = tornado.httpclient.AsyncHTTPClient()
         # try:
 
+        conn = database.get_conn()
+        c = conn.cursor()
         while True:
             response = yield http_client.fetch("http://%s:%s/*get_block?hash=%s" % (host, port, block_hash), request_timeout=10)
             rsp = tornado.escape.json_decode(response.body)
             block = rsp['block']
             block_height = block[3]
 
-            conn = database.get_conn()
-            c = conn.cursor()
             c.execute("INSERT INTO chain(hash, prev_hash, height, timestamp, data) VALUES (?, ?, ?, ?, ?)", tuple(block[1:]))
-            conn.commit()
 
             if block_height == 1:
                 break
             block_hash = block[2]
+        conn.commit()
+        get_chain(True)
 
 
 class GetBlockHandler(tornado.web.RequestHandler):
