@@ -8,6 +8,7 @@ import json
 import copy
 
 import tornado.web
+import tornado.httpclient
 
 import ecdsa
 
@@ -105,10 +106,10 @@ def longest_chain(from_hash = '0'*64):
     return longest
 
 longest = longest_chain()
-# print(longest)
+print(longest)
 highest_block_hash = None
 if longest:
-    highest_block_hash = longest[0][1]
+    highest_block_hash = longest[-1][1]
 else:
     highest_block_hash = '0'*64
 print(highest_block_hash)
@@ -147,6 +148,7 @@ else:
 
 def update_chain(block_data):
     global highest_block_hash
+    global longest
     conn = database.get_conn()
     c = conn.cursor()
 
@@ -157,6 +159,8 @@ def update_chain(block_data):
 
     c.execute("INSERT INTO chain(hash, prev_hash, height, timestamp, data) VALUES (?, ?, ?, CURRENT_TIMESTAMP, ?)", (new_block_hash, highest_block_hash, block_height+1, block_data_json))
     conn.commit()
+    print(c.lastrowid)
+    longest.append((c.lastrowid, new_block_hash, highest_block_hash, block_height+1, '', block_data_json))
     highest_block_hash = new_block_hash
 
 
@@ -211,6 +215,7 @@ class InviteHandler(tornado.web.RequestHandler):
     def get(self):
         self.finish('<form method="POST"><input name="addr"/><input type="submit" value="Invite"/></form>')
 
+    @tornado.gen.coroutine
     def post(self):
         global messages
         addr = self.get_argument('addr')
@@ -219,10 +224,18 @@ class InviteHandler(tornado.web.RequestHandler):
         assert ':' in addr
         host, port = addr.split(':')
 
-        block_data = {'type': 'name', 'name': current_name+'2', 'host': host, 'port': port, 'timestamp': time.time(), 'pk': ''}
+        http_client = tornado.httpclient.AsyncHTTPClient()
+        # try:
+        response = yield http_client.fetch("http://%s:%s/*hello" % (host, port), method='POST', request_timeout=10, body='')
+        rsp = json.loads(response.body)
+        block_data = {'type': 'name', 'name': rsp['name'], 'host': host, 'port': port, 'timestamp': time.time(), 'pk': ''}
         update_chain(block_data)
 
-        self.finish({'addr':addr, 'messages': messages})
+        self.finish({'addr':addr, 'messages': messages, 'name': rsp['name']})
+
+        # except:
+        #     pass
+
 
 class LeaveHandler(tornado.web.RequestHandler):
     def get(self):
@@ -236,7 +249,7 @@ class HelloHandler(tornado.web.RequestHandler):
         self.post()
 
     def post(self):
-        self.finish({})
+        self.finish({'name': current_name, 'pk': ''})
 
 class GetBlockHandler(tornado.web.RequestHandler):
     def get(self):
