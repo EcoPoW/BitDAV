@@ -29,7 +29,6 @@ current_port = args.port
 print(current_name, current_host, current_port)
 
 conn = database.get_conn(current_name)
-# database.get_conn()
 c = conn.cursor()
 # Insert a row of data
 # c.execute("INSERT INTO chain(hash, prev_hash, height, timestamp, data) VALUES (?, ?, 0, CURRENT_TIMESTAMP, '{}')", (uuid.uuid4().hex, '0'*64))
@@ -184,7 +183,13 @@ class GossipHandler(tornado.web.RequestHandler):
     def post(self):
         msg_json = self.request.body
         msg = json.loads(msg_json)
-        assert isinstance(msg, dict)
+        assert isinstance(msg, list)
+
+        # if msg[0] == 'INVITE':
+        #     pass
+        # elif msg[0] == 'INVITE_RSP':
+        #     pass
+
         self.finish(msg)
 
 
@@ -225,3 +230,17 @@ class LeaveHandler(tornado.web.RequestHandler):
 
     def post(self):
         self.finish('leave test')
+
+class HelloHandler(tornado.web.RequestHandler):
+    def get(self):
+        self.post()
+
+    def post(self):
+        self.finish({})
+
+class GetBlockHandler(tornado.web.RequestHandler):
+    def get(self):
+        self.finish({})
+
+    # def post(self):
+    #     self.post()

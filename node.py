@@ -50,7 +50,7 @@ def main():
         "enable_loggers": [],
         "property_manager": True,  # True: use property_manager.PropertyManager
         "lock_manager": True,  # True: use lock_manager.LockManager
-        "port": 8000
+        # "port": 8000
     }
     wsgi_app = wsgidav_app.WsgiDAVApp(config)
     settings = {"debug": True}
@@ -59,15 +59,17 @@ def main():
                                             # (r'/*join_approve', chain.TestHandler),
                                             (r'/\*leave', chain.LeaveHandler),
                                             (r'/\*invite', chain.InviteHandler),
-                                            (r'/\*get_block', chain.TestHandler),
+                                            (r'/\*hello', chain.HelloHandler),
+                                            (r'/\*get_block', chain.GetBlockHandler),
                                             # ('/\*get_nodes', TestHandler),
                                             ('/\*test', chain.TestHandler),
             (r'.*', tornado.web.FallbackHandler, dict(fallback=tornado.wsgi.WSGIContainer(wsgi_app))),
         ], **settings)
 
     server = tornado.httpserver.HTTPServer(application)
-    server.listen(config['port'])
+    server.listen(chain.current_port)
     tornado.ioloop.IOLoop.instance().start()
 
 if __name__ == '__main__':
+    print(chain.current_name, chain.current_host, chain.current_port)
     main()
