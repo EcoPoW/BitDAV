@@ -233,19 +233,24 @@ def ping():
                 is_election_required = True
 
     if is_election_required:
-        i = all_names.index(pirmary)
-        while True:
-            i += 1
-            if i >= len(all_names):
-                i = 0
-            if all_names[i] not in failed_names:
-                break
-        print('ping election', all_names, failed_names, all_names[i])
-        elected = all_names[i]
+        elected = get_elected(pirmary, all_names, failed_names)
         host, port, pk = names[elected]
+        print('ping election', all_names, failed_names, elected)
         print('ping election', time.time(), pirmary, host, port)
-        msg_json = tornado.escape.json_encode({'type': 'name', 'pirmary': pirmary, 'failed': list(failed_names)})
+        msg_json = tornado.escape.json_encode({'type': 'name', 'pirmary': elected, 'failed': list(failed_names)})
         response = yield http_client.fetch("http://%s:%s/*election" % (host, port), method='POST', request_timeout=10, body=msg_json)
+
+
+def get_elected(pirmary, all_names, failed_names):
+    i = all_names.index(pirmary)
+    while True:
+        i += 1
+        if i >= len(all_names):
+            i = 0
+        if all_names[i] not in failed_names:
+            break
+    return all_names[i]
+
 
 ping_task = tornado.ioloop.PeriodicCallback(ping, 10000) # , jitter=0.5
 ping_task.start()
@@ -268,10 +273,14 @@ class ElectionHandler(tornado.web.RequestHandler):
     def post(self):
         global failed_names
         names, pirmary = get_names()
-        msg = tornado.escape.json_decode(self.request.body)
-        print('ElectionHandler', self.request.body)
+        all_names = sorted(list(names.keys()))
+        elected = get_elected(pirmary, all_names, failed_names)
         print('ElectionHandler', names, failed_names)
-        # assert set(names.keys()) == failed_names + 
+        print('ElectionHandler msg', self.request.body)
+        print('ElectionHandler own', tornado.escape.json_encode({'type': 'name', 'pirmary': elected, 'failed': list(failed_names)}).encode())
+        assert self.request.body == tornado.escape.json_encode({'type': 'name', 'pirmary': elected, 'failed': list(failed_names)}).encode()
+
+        msg = tornado.escape.json_decode(self.request.body)
         assert set(msg['failed']) == set(failed_names)
         self.finish('chain test')
 
