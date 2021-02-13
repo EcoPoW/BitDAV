@@ -310,7 +310,12 @@ class HelloHandler(tornado.web.RequestHandler):
             block = rsp['block']
             block_height = block[2]
 
-            c.execute("INSERT INTO chain(hash, prev_hash, height, timestamp, data) VALUES (?, ?, ?, ?, ?)", tuple(block))
+            c.execute("SELECT * FROM chain WHERE hash = ?", (block_hash,))
+            blocks = c.fetchall()
+            print('HelloHandler', block_hash, blocks)
+            # if c.rowcount == 0:
+            if not blocks:
+                c.execute("INSERT INTO chain(hash, prev_hash, height, timestamp, data) VALUES (?, ?, ?, ?, ?)", tuple(block))
 
             if block_height == 1:
                 break
