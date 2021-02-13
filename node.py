@@ -55,14 +55,18 @@ def main():
     wsgi_app = wsgidav_app.WsgiDAVApp(config)
     settings = {"debug": True}
     application = tornado.web.Application([ (r'/\*gossip', chain.GossipHandler),
-                                            # (r'/*join_request', chain.TestHandler),
-                                            # (r'/*join_approve', chain.TestHandler),
+                                            (r'/\*ping', chain.PingHandler),
                                             (r'/\*leave', chain.LeaveHandler),
                                             (r'/\*invite', chain.InviteHandler),
                                             (r'/\*hello', chain.HelloHandler),
                                             (r'/\*get_block', chain.GetBlockHandler),
+                                            (r'/\*election', chain.ElectionHandler),
+                                            (r'/\*go', chain.GoHandler),
+                                            # (r'/*join_request', chain.TestHandler),
+                                            # (r'/*join_approve', chain.TestHandler),
                                             # ('/\*get_nodes', TestHandler),
-                                            ('/\*test', chain.TestHandler),
+                                            (r'/\*test', chain.TestHandler),
+                                            (r'/\*test', chain.TestHandler),
             (r'.*', tornado.web.FallbackHandler, dict(fallback=tornado.wsgi.WSGIContainer(wsgi_app))),
         ], **settings)
 

@@ -193,19 +193,32 @@ if current_name in names:
         if current_port != port:
             update_host_or_port = True
 else:
-    update_host_or_port = True
-
-print('update_host_or_port', current_host, current_port)
-
-# def update_host_or_port_callback():
+    if current_host and current_port:
+        update_host_or_port = True
 
 if update_host_or_port:
+    print('update_host_or_port', current_host, current_port)
     # tornado.ioloop.IOLoop.instance().add_callback(update_host_or_port_callback)
     block_data = {'type': 'name', 'name': current_name, 'host': current_host, 'port': current_port, 'timestamp': time.time(), 'pk': ''}
     block = update_chain(block_data)
     get_names(True)
     broadcast_block(list(block))
 
+@tornado.gen.coroutine
+def ping():
+    http_client = tornado.httpclient.AsyncHTTPClient()
+    for name, info in get_names().items():
+        host, port, pk = info
+        if name == current_name:
+            pass
+        try:
+            response = yield http_client.fetch("http://%s:%s/*ping" % (host, port), request_timeout=1)
+            print('ping', time.time(), host, port, response.request_time)
+        except:
+            print('ping failed', time.time(), host, port)
+
+ping_task = tornado.ioloop.PeriodicCallback(ping, 10000) # , jitter=0.5
+ping_task.start()
 
 messages = []
 
@@ -214,6 +227,13 @@ class TestHandler(tornado.web.RequestHandler):
     def get(self):
         self.finish('chain test')
 
+class GoHandler(tornado.web.RequestHandler):
+    def get(self):
+        self.finish('chain test')
+
+class ElectionHandler(tornado.web.RequestHandler):
+    def get(self):
+        self.finish('chain test')
 
 class GossipHandler(tornado.web.RequestHandler):
     def get(self):
@@ -231,6 +251,11 @@ class GossipHandler(tornado.web.RequestHandler):
         conn.commit()
 
         self.finish({})
+
+
+class PingHandler(tornado.web.RequestHandler):
+    def get(self):
+        self.finish('chain test')
 
 
 class JoinRequestHandler(tornado.web.RequestHandler):
@@ -333,18 +358,8 @@ class GetBlockHandler(tornado.web.RequestHandler):
 
         conn = database.get_conn()
         c = conn.cursor()
-
-        # block_hash = latest_block_hash()
-        # block_height = latest_block_height()
-        # new_block_data_json = tornado.escape.json_encode(new_block_data)
-        # digest = hashlib.sha256((block_hash+str(block_height)+block_data_json).encode('utf8'))
-        # new_block_hash = digest.hexdigest()
-
         c.execute("SELECT * FROM chain WHERE hash = ?", (block_hash, ))
         block = c.fetchone()
         print('GetBlockHandler', block)
 
         self.finish({'block': list(block[1:])})
-
-    # def post(self):
-    #     self.post()
