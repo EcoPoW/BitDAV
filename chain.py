@@ -291,37 +291,40 @@ class HelloHandler(tornado.web.RequestHandler):
     def get(self):
         self.post()
 
-    @tornado.gen.coroutine
+    # @tornado.gen.coroutine
     def post(self):
         req = tornado.escape.json_decode(self.request.body)
         host = req['host']
         port = req['port']
         block_hash = req['highest_block_hash']
         self.finish({'name': current_name, 'pk': ''})
+        fetch_chain(host, port, block_hash)
 
-        http_client = tornado.httpclient.AsyncHTTPClient()
+
+@tornado.gen.coroutine
+def fetch_chain(host, port, block_hash):
+    http_client = tornado.httpclient.AsyncHTTPClient()
+    conn = database.get_conn()
+    c = conn.cursor()
+    while True:
         # try:
+        response = yield http_client.fetch("http://%s:%s/*get_block?hash=%s" % (host, port, block_hash), request_timeout=10)
+        rsp = tornado.escape.json_decode(response.body)
+        block = rsp['block']
+        block_height = block[2]
 
-        conn = database.get_conn()
-        c = conn.cursor()
-        while True:
-            response = yield http_client.fetch("http://%s:%s/*get_block?hash=%s" % (host, port, block_hash), request_timeout=10)
-            rsp = tornado.escape.json_decode(response.body)
-            block = rsp['block']
-            block_height = block[2]
+        c.execute("SELECT * FROM chain WHERE hash = ?", (block_hash,))
+        blocks = c.fetchall()
+        print('HelloHandler', block_hash, blocks)
+        # if c.rowcount == 0:
+        if not blocks:
+            c.execute("INSERT INTO chain(hash, prev_hash, height, timestamp, data) VALUES (?, ?, ?, ?, ?)", tuple(block))
 
-            c.execute("SELECT * FROM chain WHERE hash = ?", (block_hash,))
-            blocks = c.fetchall()
-            print('HelloHandler', block_hash, blocks)
-            # if c.rowcount == 0:
-            if not blocks:
-                c.execute("INSERT INTO chain(hash, prev_hash, height, timestamp, data) VALUES (?, ?, ?, ?, ?)", tuple(block))
-
-            if block_height == 1:
-                break
-            block_hash = block[1]
-        conn.commit()
-        get_chain(True)
+        if block_height == 1:
+            break
+        block_hash = block[1]
+    conn.commit()
+    get_chain(True)
 
 
 class GetBlockHandler(tornado.web.RequestHandler):
