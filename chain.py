@@ -149,7 +149,8 @@ def update_chain(new_block_data):
 @tornado.gen.coroutine
 def broadcast_block(new_block):
     http_client = tornado.httpclient.AsyncHTTPClient()
-    for name, info in get_names().items():
+    names, pirmary = get_names()
+    for name, info in names.items():
         host, port, pk = info
         print('broadcast_block', host, port, name, new_block)
         if name == current_name:
@@ -160,6 +161,7 @@ def broadcast_block(new_block):
 names = None
 def get_names(reload=False):
     global names
+    pirmary = None
     if names or not reload:
         names = {}
         for block in get_chain():
@@ -174,10 +176,12 @@ def get_names(reload=False):
                 pk = block_data['pk']
                 if name:
                     names[name] = [host, port, pk]
-    print('get_names', names)
-    return names
+                if block_data.get('pirmary'):
+                    pirmary = block_data['pirmary']
+    print('get_names', names, pirmary)
+    return names, pirmary
 
-get_names()
+_, pirmary = get_names()
 update_host_or_port = False
 if current_name in names:
     host, port, pk = names[current_name]
@@ -200,14 +204,20 @@ if update_host_or_port:
     print('update_host_or_port', current_host, current_port)
     # tornado.ioloop.IOLoop.instance().add_callback(update_host_or_port_callback)
     block_data = {'type': 'name', 'name': current_name, 'host': current_host, 'port': current_port, 'timestamp': time.time(), 'pk': ''}
+    if not pirmary:
+        block_data['pirmary'] = current_name
     block = update_chain(block_data)
     get_names(True)
     broadcast_block(list(block))
 
 @tornado.gen.coroutine
 def ping():
+    is_election_required = False
     http_client = tornado.httpclient.AsyncHTTPClient()
-    for name, info in get_names().items():
+    names, pirmary = get_names()
+    all_names = sorted(list(names.keys()))
+    failed_names = set()
+    for name, info in names.items():
         host, port, pk = info
         if name == current_name:
             pass
@@ -216,6 +226,23 @@ def ping():
             print('ping', time.time(), host, port, response.request_time)
         except:
             print('ping failed', time.time(), host, port)
+            failed_names.add(name)
+            if name == pirmary:
+                is_election_required = True
+
+    if is_election_required:
+        i = all_names.index(pirmary)
+        while True:
+            i += 1
+            if i >= len(all_names):
+                i = 0
+            if all_names[i] not in failed_names:
+                break
+        print('ping election', all_names, failed_names, all_names[i])
+        elected = all_names[i]
+        host, port, pk = names[elected]
+        print('ping election', time.time(), pirmary, host, port)
+        response = yield http_client.fetch("http://%s:%s/*election" % (host, port), method='POST', request_timeout=10, body=tornado.escape.json_encode({'type': 'name', 'pirmary': pirmary}))
 
 ping_task = tornado.ioloop.PeriodicCallback(ping, 10000) # , jitter=0.5
 ping_task.start()
@@ -233,6 +260,10 @@ class GoHandler(tornado.web.RequestHandler):
 
 class ElectionHandler(tornado.web.RequestHandler):
     def get(self):
+        self.finish('chain test')
+
+    def post(self):
+        print(self.request.body)
         self.finish('chain test')
 
 class GossipHandler(tornado.web.RequestHandler):
