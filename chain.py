@@ -14,41 +14,6 @@ import ecdsa
 
 import database
 
-parser = argparse.ArgumentParser(description="node description")
-parser.add_argument('--name')
-parser.add_argument('--host', default=None)
-parser.add_argument('--port', default=None)
-# parser.add_argument('--parent_host', default="127.0.0.1")
-# parser.add_argument('--parent_port', default=2018)
-# parser.add_argument('--control_host')
-# parser.add_argument('--control_port', default=setting.DASHBOARD_PORT)
-
-args = parser.parse_args()
-current_name = args.name
-current_host = args.host
-current_port = args.port
-print('parser', current_name, current_host, current_port)
-
-conn = database.get_conn(current_name)
-c = conn.cursor()
-# Insert a row of data
-# c.execute("INSERT INTO chain(hash, prev_hash, height, timestamp, data) VALUES (?, ?, 0, CURRENT_TIMESTAMP, '{}')", (uuid.uuid4().hex, '0'*64))
-
-# Save (commit) the changes
-# conn.commit()
-
-# c.execute("SELECT * FROM chain")
-# for i in c.fetchall():
-#     print(i)
-
-sk_filename = "%s.pem" % current_name
-if os.path.exists(sk_filename):
-    sk = ecdsa.SigningKey.from_pem(open("./"+sk_filename).read())
-else:
-    sk = ecdsa.SigningKey.generate(curve=ecdsa.NIST256p)
-    open("./"+sk_filename, "w").write(bytes.decode(sk.to_pem()))
-print(sk)
-
 def longest_chain(from_hash = '0'*64):
     conn = database.get_conn()
     c = conn.cursor()
@@ -105,8 +70,6 @@ def longest_chain(from_hash = '0'*64):
             longest = i
     return longest
 
-# frozen_block_hash = None
-longest = None
 def get_chain(reload=False):
     global longest
     if reload or not longest:
@@ -155,11 +118,103 @@ def broadcast_block(new_block):
         print('broadcast_block', host, port, name, new_block)
         if name == current_name:
             continue
-        response = yield http_client.fetch("http://%s:%s/*gossip" % (host, port), method='POST', request_timeout=10, body=tornado.escape.json_encode(new_block))
+        try:
+            response = yield http_client.fetch("http://%s:%s/*gossip" % (host, port), method='POST', request_timeout=10, body=tornado.escape.json_encode(new_block))
+        except:
+            pass
 
+@tornado.gen.coroutine
+def ping():
+    global failed_names
+    global current_name
+
+    http_client = tornado.httpclient.AsyncHTTPClient()
+    names, pirmary = get_names()
+    all_names = sorted(list(names.keys()))
+    failed_names = set()
+
+    if current_name == pirmary:
+        print('ping broadcast', current_name, pirmary)
+        recent_block = get_chain()[-1]
+        print('ping recent_block', recent_block)
+        broadcast_block(list(recent_block[1:]))
+
+    is_election_required = False
+    for name, info in names.items():
+        host, port, pk = info
+        if name == current_name:
+            pass
+        try:
+            response = yield http_client.fetch("http://%s:%s/*ping" % (host, port), request_timeout=1)
+            print('ping', time.time(), host, port, response.request_time)
+            if name in failed_names:
+                failed_names.remove(name)
+        except:
+            print('ping failed', time.time(), host, port)
+            failed_names.add(name)
+            if name == pirmary:
+                is_election_required = True
+
+    if is_election_required:
+        elected = get_elected(pirmary, all_names, failed_names)
+        host, port, pk = names[elected]
+        print('ping election', all_names, failed_names, pirmary)
+        print('ping election', time.time(), elected, host, port)
+        msg_json = tornado.escape.json_encode({'type': 'name', 'pirmary': elected, 'failed': list(failed_names), 'sig': {current_name: ''}})
+        response = yield http_client.fetch("http://%s:%s/*election" % (host, port), method='POST', request_timeout=10, body=msg_json)
+
+def get_elected(pirmary, all_names, failed_names):
+    i = all_names.index(pirmary)
+    while True:
+        i += 1
+        if i >= len(all_names):
+            i = 0
+        if all_names[i] not in failed_names:
+            break
+    return all_names[i]
+
+# frozen_block_hash = None
+longest = None
 # frozen_names = {}
 chain_names = None
 failed_names = set()
+
+parser = argparse.ArgumentParser(description="node description")
+parser.add_argument('--name')
+parser.add_argument('--host', default=None)
+parser.add_argument('--port', default=None)
+# parser.add_argument('--parent_host', default="127.0.0.1")
+# parser.add_argument('--parent_port', default=2018)
+# parser.add_argument('--control_host')
+# parser.add_argument('--control_port', default=setting.DASHBOARD_PORT)
+
+args = parser.parse_args()
+current_name = args.name
+current_host = args.host
+current_port = args.port
+print('parser', current_name, current_host, current_port)
+
+conn = database.get_conn(current_name)
+c = conn.cursor()
+# Insert a row of data
+# c.execute("INSERT INTO chain(hash, prev_hash, height, timestamp, data) VALUES (?, ?, 0, CURRENT_TIMESTAMP, '{}')", (uuid.uuid4().hex, '0'*64))
+
+# Save (commit) the changes
+# conn.commit()
+
+# c.execute("SELECT * FROM chain")
+# for i in c.fetchall():
+#     print(i)
+
+sk_filename = "%s.pem" % current_name
+if os.path.exists(sk_filename):
+    sk = ecdsa.SigningKey.from_pem(open("./"+sk_filename).read())
+else:
+    sk = ecdsa.SigningKey.generate(curve=ecdsa.NIST256p)
+    open("./"+sk_filename, "w").write(bytes.decode(sk.to_pem()))
+print(sk)
+
+
 def get_names(reload=False):
     global chain_names
     pirmary = None
@@ -211,46 +266,6 @@ if update_host_or_port:
     block = update_chain(block_data)
     get_names(True)
     broadcast_block(list(block))
-
-@tornado.gen.coroutine
-def ping():
-    global failed_names
-    is_election_required = False
-    http_client = tornado.httpclient.AsyncHTTPClient()
-    names, pirmary = get_names()
-    all_names = sorted(list(names.keys()))
-    failed_names = set()
-    for name, info in names.items():
-        host, port, pk = info
-        if name == current_name:
-            pass
-        try:
-            response = yield http_client.fetch("http://%s:%s/*ping" % (host, port), request_timeout=1)
-            print('ping', time.time(), host, port, response.request_time)
-        except:
-            print('ping failed', time.time(), host, port)
-            failed_names.add(name)
-            if name == pirmary:
-                is_election_required = True
-
-    if is_election_required:
-        elected = get_elected(pirmary, all_names, failed_names)
-        host, port, pk = names[elected]
-        print('ping election', all_names, failed_names, pirmary)
-        print('ping election', time.time(), elected, host, port)
-        msg_json = tornado.escape.json_encode({'type': 'name', 'pirmary': elected, 'failed': list(failed_names), 'sig': {current_name:''}})
-        response = yield http_client.fetch("http://%s:%s/*election" % (host, port), method='POST', request_timeout=10, body=msg_json)
-
-
-def get_elected(pirmary, all_names, failed_names):
-    i = all_names.index(pirmary)
-    while True:
-        i += 1
-        if i >= len(all_names):
-            i = 0
-        if all_names[i] not in failed_names:
-            break
-    return all_names[i]
 
 
 ping_task = tornado.ioloop.PeriodicCallback(ping, 10000) # , jitter=0.5
