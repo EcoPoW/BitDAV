@@ -71,26 +71,26 @@ def longest_chain(from_hash = '0'*64):
     return longest
 
 def get_chain(reload=False):
-    global longest
-    if reload or not longest:
-        longest = longest_chain()
-    return longest
+    global chain_longest
+    if reload or not chain_longest:
+        chain_longest = longest_chain()
+    return chain_longest
     # print(longest)
 
 def latest_block_hash():
-    global longest
-    if longest:
-        return longest[-1][1]
+    global chain_longest
+    if chain_longest:
+        return chain_longest[-1][1]
     return '0'*64
 
 def latest_block_height():
-    global longest
-    if longest:
-        return longest[-1][3]
+    global chain_longest
+    if chain_longest:
+        return chain_longest[-1][3]
     return 0
 
 def update_chain(new_block_data):
-    global longest
+    global chain_longest
     conn = database.get_conn()
     c = conn.cursor()
 
@@ -106,7 +106,7 @@ def update_chain(new_block_data):
 
     c.execute("SELECT * FROM chain WHERE id = ?", (c.lastrowid, ))
     block = c.fetchone()
-    longest.append(block)
+    chain_longest.append(block)
     return block[1:]
 
 @tornado.gen.coroutine
@@ -174,7 +174,7 @@ def get_elected(pirmary, all_names, failed_names):
     return all_names[i]
 
 # frozen_block_hash = None
-longest = None
+chain_longest = None
 # frozen_names = {}
 chain_names = None
 failed_names = set()
@@ -320,26 +320,33 @@ class ElectionHandler(tornado.web.RequestHandler):
         self.finish('')
 
 class GossipHandler(tornado.web.RequestHandler):
-    def get(self):
-        self.finish('chain test')
-
     def post(self):
         msg_json = self.request.body
         msg = tornado.escape.json_decode(msg_json)
         assert isinstance(msg, list)
 
         block = msg
+        block_hash = block[0]
         conn = database.get_conn()
         c = conn.cursor()
-        c.execute("INSERT INTO chain(hash, prev_hash, height, timestamp, data) VALUES (?, ?, ?, ?, ?)", tuple(block))
-        conn.commit()
+        c.execute("SELECT * FROM chain WHERE hash = ?", (block_hash,))
+        blocks = c.fetchall()
+        print('GossipHandler', block_hash, blocks)
+        # if c.rowcount == 0:
+        if not blocks:
+            c.execute("INSERT INTO chain(hash, prev_hash, height, timestamp, data) VALUES (?, ?, ?, ?, ?)", tuple(block))
+            conn.commit()
+        get_chain(True)
+
+        # get host and port from the new pirmary
+        # fetch_chain(host, port, block_hash)
 
         self.finish({})
 
 
 class PingHandler(tornado.web.RequestHandler):
     def get(self):
-        self.finish('chain test')
+        self.finish('pong')
 
 
 class JoinRequestHandler(tornado.web.RequestHandler):
