@@ -173,6 +173,30 @@ def get_elected(pirmary, all_names, failed_names):
             break
     return all_names[i]
 
+
+def get_names(reload=False):
+    global chain_names
+    pirmary = None
+    if chain_names or not reload:
+        chain_names = {}
+        for block in get_chain():
+            block_data_json = block[5]
+            block_data = tornado.escape.json_decode(block_data_json)
+            print('get_names', block_data)
+            # print(names)
+            if block_data.get('type') == 'name':
+                if 'name' in block_data:
+                    name = block_data['name']
+                    host = block_data['host']
+                    port = block_data['port']
+                    pk = block_data['pk']
+                    if name:
+                        chain_names[name] = [host, port, pk]
+                if 'pirmary' in block_data:
+                    pirmary = block_data['pirmary']
+    print('get_names', chain_names, pirmary)
+    return chain_names, pirmary
+
 # frozen_block_hash = None
 chain_longest = None
 # frozen_names = {}
@@ -208,35 +232,12 @@ c = conn.cursor()
 
 sk_filename = "%s.pem" % current_name
 if os.path.exists(sk_filename):
-    sk = ecdsa.SigningKey.from_pem(open("./"+sk_filename).read())
+    current_sk = ecdsa.SigningKey.from_pem(open("./"+sk_filename).read())
 else:
-    sk = ecdsa.SigningKey.generate(curve=ecdsa.NIST256p)
+    current_sk = ecdsa.SigningKey.generate(curve=ecdsa.NIST256p)
     open("./"+sk_filename, "w").write(bytes.decode(sk.to_pem()))
-print(sk)
+print(current_sk)
 
-
-def get_names(reload=False):
-    global chain_names
-    pirmary = None
-    if chain_names or not reload:
-        chain_names = {}
-        for block in get_chain():
-            block_data_json = block[5]
-            block_data = tornado.escape.json_decode(block_data_json)
-            print('get_names', block_data)
-            # print(names)
-            if block_data.get('type') == 'name':
-                if 'name' in block_data:
-                    name = block_data['name']
-                    host = block_data['host']
-                    port = block_data['port']
-                    pk = block_data['pk']
-                    if name:
-                        chain_names[name] = [host, port, pk]
-                if 'pirmary' in block_data:
-                    pirmary = block_data['pirmary']
-    print('get_names', chain_names, pirmary)
-    return chain_names, pirmary
 
 names, pirmary = get_names()
 update_host_or_port = False
@@ -284,9 +285,6 @@ class GoHandler(tornado.web.RequestHandler):
 
 class ElectionHandler(tornado.web.RequestHandler):
     received_election = {}
-    def get(self):
-        self.finish('chain test')
-
     def post(self):
         global failed_names
         names, pirmary = get_names()
@@ -349,19 +347,19 @@ class PingHandler(tornado.web.RequestHandler):
         self.finish('pong')
 
 
-class JoinRequestHandler(tornado.web.RequestHandler):
-    def get(self):
-        self.finish('chain test')
+# class JoinRequestHandler(tornado.web.RequestHandler):
+#     def get(self):
+#         self.finish('chain test')
 
-    def post(self):
-        self.finish('chain test')
+#     def post(self):
+#         self.finish('chain test')
 
-class JoinApproveHandler(tornado.web.RequestHandler):
-    def get(self):
-        self.finish('chain test')
+# class JoinApproveHandler(tornado.web.RequestHandler):
+#     def get(self):
+#         self.finish('chain test')
 
-    def post(self):
-        self.finish('chain test')
+#     def post(self):
+#         self.finish('chain test')
 
 class InviteHandler(tornado.web.RequestHandler):
     def get(self):
@@ -386,6 +384,8 @@ class InviteHandler(tornado.web.RequestHandler):
         # try:
         response = yield http_client.fetch("http://%s:%s/*hello" % (host, port), method='POST', request_timeout=10, body=req_json)
         rsp = tornado.escape.json_decode(response.body)
+
+        # need to check if the name already exists in the chain
         block_data = {'type': 'name', 'name': rsp['name'], 'host': host, 'port': port, 'timestamp': time.time(), 'pk': ''}
         block = update_chain(block_data)
         broadcast_block(list(block))
