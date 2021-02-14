@@ -171,13 +171,14 @@ def get_names(reload=False):
             print('get_names', block_data)
             # print(names)
             if block_data.get('type') == 'name':
-                name = block_data['name']
-                host = block_data['host']
-                port = block_data['port']
-                pk = block_data['pk']
-                if name:
-                    chain_names[name] = [host, port, pk]
-                if block_data.get('pirmary'):
+                if 'name' in block_data:
+                    name = block_data['name']
+                    host = block_data['host']
+                    port = block_data['port']
+                    pk = block_data['pk']
+                    if name:
+                        chain_names[name] = [host, port, pk]
+                if 'pirmary' in block_data:
                     pirmary = block_data['pirmary']
     print('get_names', chain_names, pirmary)
     return chain_names, pirmary
@@ -235,9 +236,9 @@ def ping():
     if is_election_required:
         elected = get_elected(pirmary, all_names, failed_names)
         host, port, pk = names[elected]
-        print('ping election', all_names, failed_names, elected)
-        print('ping election', time.time(), pirmary, host, port)
-        msg_json = tornado.escape.json_encode({'type': 'name', 'pirmary': elected, 'failed': list(failed_names)})
+        print('ping election', all_names, failed_names, pirmary)
+        print('ping election', time.time(), elected, host, port)
+        msg_json = tornado.escape.json_encode({'type': 'name', 'pirmary': elected, 'failed': list(failed_names), 'sig': {current_name:''}})
         response = yield http_client.fetch("http://%s:%s/*election" % (host, port), method='POST', request_timeout=10, body=msg_json)
 
 
@@ -267,6 +268,7 @@ class GoHandler(tornado.web.RequestHandler):
         self.finish('chain test')
 
 class ElectionHandler(tornado.web.RequestHandler):
+    received_election = {}
     def get(self):
         self.finish('chain test')
 
@@ -277,12 +279,30 @@ class ElectionHandler(tornado.web.RequestHandler):
         elected = get_elected(pirmary, all_names, failed_names)
         print('ElectionHandler', names, failed_names)
         print('ElectionHandler msg', self.request.body)
-        print('ElectionHandler own', tornado.escape.json_encode({'type': 'name', 'pirmary': elected, 'failed': list(failed_names)}).encode())
-        assert self.request.body == tornado.escape.json_encode({'type': 'name', 'pirmary': elected, 'failed': list(failed_names)}).encode()
 
         msg = tornado.escape.json_decode(self.request.body)
-        assert set(msg['failed']) == set(failed_names)
-        self.finish('chain test')
+        if 'sig' not in msg:
+            raise
+        node_name, sig = list(msg['sig'].items())[0]
+        msg.pop('sig')
+        msg_json = tornado.escape.json_encode(msg)
+
+        block_data = {'type': 'name', 'pirmary': elected, 'failed': list(failed_names)}
+        block_data_json = tornado.escape.json_encode(block_data)
+        print('ElectionHandler own', block_data_json)
+        assert msg_json == block_data_json
+
+        self.received_election.setdefault(block_data_json, {})
+        self.received_election[block_data_json][node_name] = sig
+        print('ElectionHandler', self.received_election)
+        assert set(self.received_election[block_data_json].keys()) == set(all_names) - failed_names
+
+        assert set(msg['failed']) == failed_names
+        block_data['sig'] = self.received_election[block_data_json]
+        block = update_chain(block_data)
+        broadcast_block(list(block))
+
+        self.finish('')
 
 class GossipHandler(tornado.web.RequestHandler):
     def get(self):
