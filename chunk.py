@@ -15,10 +15,10 @@ MAX_CHUNK_SIZE = 1024*1024*10
 # group 0
 # pc1 300M
 # pc2 1500M
-group0_quota = [1024*1024*300, 1024*1024*1600]
-group0_device_no = len(group0_quota)
-group0_current_device_index = 0
-quota = group0_quota[group0_current_device_index]
+group0_quota = [1024*1024*100, 1024*1024*1600]
+# group0_device_no = len(group0_quota)
+# group0_current_device_index = 0
+# quota = group0_quota[group0_current_device_index]
 # group 1
 # pc3 200M
 # pc4 300M
@@ -34,15 +34,29 @@ def mt_combine(hash_list, algorithm):
     result.extend(hash_list[l-m:])
     return result
 
-
+def chunks_to_partition(chunks, partition_free_sizes):
+    # chunks: [(chunk_hash, chunk_size), ...]
+    # partition_free_sizes: [free_size, ...]
+    result = {}
+    left_free_sizes = []
+    index = 0
+    free_size = partition_free_sizes[index]
+    for chunk_hash, chunk_size in chunks:
+        if free_size < chunk_size:
+            left_free_sizes.append(free_size)
+            index += 1
+            free_size = partition_free_sizes[index]
+        free_size -= chunk_size
+        result[(chunk_hash, chunk_size)] = index
+    return result, left_free_sizes
 
 print(sys.argv[2:])
 foldername = sys.argv[1]
 folder_meta_data = {'type':'folder_meta', 'name': foldername, 'items':[]}
 for filename in sys.argv[2:]:
+    file_chunks = []
     with open(filename, 'rb') as f:
-        group0 = []
-        chunks = []
+        # group0 = []
         filesize = 0
 
         while True:
@@ -53,15 +67,21 @@ for filename in sys.argv[2:]:
             chunk_size = len(data)
             filesize += chunk_size
             # print(chunk_hash, chunk_size)
-            chunks.append([chunk_hash, chunk_size, group0_device_no-len(group0_quota)])
+            # chunks.append([chunk_hash, chunk_size, group0_device_no-len(group0_quota)])
+            file_chunks.append([chunk_hash, chunk_size])
             # write file
-            if quota < len(data):
-                group0_current_device_index += 1
-                quota = group0_quota[group0_current_device_index]
+            # if quota < chunk_size:
+            #     group0_current_device_index += 1
+            #     quota = group0_quota[group0_current_device_index]
 
-            quota -= len(data)
-            print('quota', group0_current_device_index,quota)
+            # quota -= chunk_size
+            # print('quota', group0_current_device_index, quota)
 
+    chunks_to_go, group0_quota_left = chunks_to_partition(file_chunks, group0_quota)
+    pprint.pprint(chunks_to_go)
+    chunks = []
+    for chunk_hash, chunk_size in file_chunks:
+        chunks.append([chunk_hash, chunk_size, chunks_to_go[(chunk_hash, chunk_size)]])
 
     print('chunks', chunks, len(chunks))
     hash_list = mt_combine([c[0:1] for c in chunks], hashlib.sha256)
@@ -70,7 +90,6 @@ for filename in sys.argv[2:]:
         print('---')
         hash_list = mt_combine(hash_list, hashlib.sha256)
     merkle_root = hash_list[0][-1]
-    # pprint.pprint(hash_list)
 
 
     file_meta_data = [os.path.basename(filename), merkle_root, filesize, time.time(), chunks]
