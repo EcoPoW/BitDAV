@@ -67,11 +67,11 @@ def main():
                                             # (r'/\*join_approve', chain.JoinApproveHandler),
                                             # (r'/\*get_nodes', TestHandler),
 
-                                            (r'/\*add_folder', fs.TestHandler),
-                                            (r'/\*add_files', fs.TestHandler),
-                                            (r'/\*remove_files', fs.TestHandler),
-                                            (r'/\*add_device', fs.TestHandler),
-                                            (r'/\*set_device_quota', fs.TestHandler),
+                                            (r'/\*add_folder', fs.AddFolderHandler),
+                                            (r'/\*add_files', fs.AddFilesHandler),
+                                            (r'/\*remove_files', fs.RemoveFilesHandler),
+                                            (r'/\*add_device', fs.AddDeviceHandler),
+                                            (r'/\*set_device', fs.SetDeviceHandler),
 
                                             (r'/\*test', chain.TestHandler),
             (r'.*', tornado.web.FallbackHandler, dict(fallback=tornado.wsgi.WSGIContainer(wsgi_app))),
