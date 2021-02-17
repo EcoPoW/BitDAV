@@ -235,7 +235,7 @@ if os.path.exists(sk_filename):
     current_sk = ecdsa.SigningKey.from_pem(open("./"+sk_filename).read())
 else:
     current_sk = ecdsa.SigningKey.generate(curve=ecdsa.NIST256p)
-    open("./"+sk_filename, "w").write(bytes.decode(sk.to_pem()))
+    open("./"+sk_filename, "w").write(bytes.decode(current_sk.to_pem()))
 print(current_sk)
 
 

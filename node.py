@@ -33,6 +33,7 @@ from wsgidav.fs_dav_provider import FilesystemProvider
 
 
 import chain
+import fs
 
 
 def main():
@@ -65,6 +66,13 @@ def main():
                                             # (r'/\*join_request', chain.JoinRequestHandler),
                                             # (r'/\*join_approve', chain.JoinApproveHandler),
                                             # (r'/\*get_nodes', TestHandler),
+
+                                            (r'/\*add_folder', fs.TestHandler),
+                                            (r'/\*add_files', fs.TestHandler),
+                                            (r'/\*remove_files', fs.TestHandler),
+                                            (r'/\*add_device', fs.TestHandler),
+                                            (r'/\*set_device_quota', fs.TestHandler),
+
                                             (r'/\*test', chain.TestHandler),
             (r'.*', tornado.web.FallbackHandler, dict(fallback=tornado.wsgi.WSGIContainer(wsgi_app))),
         ], **settings)
