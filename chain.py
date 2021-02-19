@@ -127,17 +127,18 @@ def broadcast_block(new_block):
 def ping():
     global failed_names
     global current_name
+    global recent_election_block
 
     http_client = tornado.httpclient.AsyncHTTPClient()
     names, pirmary = get_names()
     all_names = sorted(list(names.keys()))
     failed_names = set()
 
-    if current_name == pirmary:
+    print('ping recent_block', recent_election_block)
+    if current_name == pirmary and recent_election_block:
         print('ping broadcast', current_name, pirmary)
-        recent_block = get_chain()[-1]
-        print('ping recent_block', recent_block)
-        broadcast_block(list(recent_block[1:]))
+        # recent_block = get_chain()[-1]
+        broadcast_block(list(recent_election_block[1:]))
 
     is_election_required = False
     for name, info in names.items():
@@ -176,6 +177,8 @@ def get_elected(pirmary, all_names, failed_names):
 
 def get_names(reload=False):
     global chain_names
+    global recent_election_block
+
     pirmary = None
     if chain_names or not reload:
         chain_names = {}
@@ -194,12 +197,41 @@ def get_names(reload=False):
                         chain_names[name] = [host, port, pk]
                 if 'pirmary' in block_data:
                     pirmary = block_data['pirmary']
+                    recent_election_block = block
     print('get_names', chain_names, pirmary)
     return chain_names, pirmary
+
+
+@tornado.gen.coroutine
+def fetch_chain(host, port, block_hash):
+    http_client = tornado.httpclient.AsyncHTTPClient()
+    conn = database.get_conn()
+    c = conn.cursor()
+    while True:
+        # try:
+        response = yield http_client.fetch("http://%s:%s/*get_block?hash=%s" % (host, port, block_hash), request_timeout=10)
+        rsp = tornado.escape.json_decode(response.body)
+        block = rsp['block']
+        block_height = block[2]
+
+        c.execute("SELECT * FROM chain WHERE hash = ?", (block_hash,))
+        blocks = c.fetchall()
+        print('HelloHandler', block_hash, blocks)
+        # if c.rowcount == 0:
+        if not blocks:
+            c.execute("INSERT INTO chain(hash, prev_hash, height, timestamp, data) VALUES (?, ?, ?, ?, ?)", tuple(block))
+
+        if block_height == 1:
+            break
+        block_hash = block[1]
+    conn.commit()
+    get_chain(True)
+
 
 # frozen_block_hash = None
 chain_longest = None
 # frozen_names = {}
+recent_election_block = None
 chain_names = None
 failed_names = set()
 
@@ -287,6 +319,8 @@ class ElectionHandler(tornado.web.RequestHandler):
     received_election = {}
     def post(self):
         global failed_names
+        global recent_election_block
+
         names, pirmary = get_names()
         all_names = sorted(list(names.keys()))
         elected = get_elected(pirmary, all_names, failed_names)
@@ -312,32 +346,37 @@ class ElectionHandler(tornado.web.RequestHandler):
 
         assert set(msg['failed']) == failed_names
         block_data['sig'] = self.received_election[block_data_json]
-        block = update_chain(block_data)
-        broadcast_block(list(block))
+        recent_election_block = update_chain(block_data)
+        broadcast_block(list(recent_election_block))
 
         self.finish('')
 
 class GossipHandler(tornado.web.RequestHandler):
     def post(self):
-        msg_json = self.request.body
-        msg = tornado.escape.json_decode(msg_json)
-        assert isinstance(msg, list)
+        block_json = self.request.body
+        block = tornado.escape.json_decode(block_json)
+        assert isinstance(block, list)
 
-        block = msg
         block_hash = block[0]
         conn = database.get_conn()
         c = conn.cursor()
         c.execute("SELECT * FROM chain WHERE hash = ?", (block_hash,))
         blocks = c.fetchall()
-        print('GossipHandler', block_hash, blocks)
         # if c.rowcount == 0:
         if not blocks:
             c.execute("INSERT INTO chain(hash, prev_hash, height, timestamp, data) VALUES (?, ?, ?, ?, ?)", tuple(block))
             conn.commit()
-        get_chain(True)
 
         # get host and port from the new pirmary
-        # fetch_chain(host, port, block_hash)
+        block_data_json = block[4]
+        block_data = tornado.escape.json_decode(block_data_json)
+        print('GossipHandler', block_hash, block_data)
+        if 'pirmary' in block_data:
+            names, pirmary = get_names()
+            print('GossipHandler', block_hash, names[block_data['pirmary']])
+            host, port, pk = names[block_data['pirmary']]
+
+            fetch_chain(host, port, block_hash)
 
         self.finish({})
 
@@ -415,32 +454,6 @@ class HelloHandler(tornado.web.RequestHandler):
         block_hash = req['highest_block_hash']
         self.finish({'name': current_name, 'pk': ''})
         fetch_chain(host, port, block_hash)
-
-
-@tornado.gen.coroutine
-def fetch_chain(host, port, block_hash):
-    http_client = tornado.httpclient.AsyncHTTPClient()
-    conn = database.get_conn()
-    c = conn.cursor()
-    while True:
-        # try:
-        response = yield http_client.fetch("http://%s:%s/*get_block?hash=%s" % (host, port, block_hash), request_timeout=10)
-        rsp = tornado.escape.json_decode(response.body)
-        block = rsp['block']
-        block_height = block[2]
-
-        c.execute("SELECT * FROM chain WHERE hash = ?", (block_hash,))
-        blocks = c.fetchall()
-        print('HelloHandler', block_hash, blocks)
-        # if c.rowcount == 0:
-        if not blocks:
-            c.execute("INSERT INTO chain(hash, prev_hash, height, timestamp, data) VALUES (?, ?, ?, ?, ?)", tuple(block))
-
-        if block_height == 1:
-            break
-        block_hash = block[1]
-    conn.commit()
-    get_chain(True)
 
 
 class GetBlockHandler(tornado.web.RequestHandler):
