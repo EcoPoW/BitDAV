@@ -216,7 +216,7 @@ def fetch_chain(host, port, block_hash):
 
         c.execute("SELECT * FROM chain WHERE hash = ?", (block_hash,))
         blocks = c.fetchall()
-        print('HelloHandler', block_hash, blocks)
+        print('fetch_chain', block_hash, blocks)
         # if c.rowcount == 0:
         if not blocks:
             c.execute("INSERT INTO chain(hash, prev_hash, height, timestamp, data) VALUES (?, ?, ?, ?, ?)", tuple(block))
@@ -251,7 +251,7 @@ current_port = args.port
 print('parser', current_name, current_host, current_port)
 
 conn = database.get_conn(current_name)
-c = conn.cursor()
+# c = conn.cursor()
 # Insert a row of data
 # c.execute("INSERT INTO chain(hash, prev_hash, height, timestamp, data) VALUES (?, ?, 0, CURRENT_TIMESTAMP, '{}')", (uuid.uuid4().hex, '0'*64))
 
@@ -352,12 +352,17 @@ class ElectionHandler(tornado.web.RequestHandler):
         self.finish('')
 
 class GossipHandler(tornado.web.RequestHandler):
+    arrived_block_hash = set()
     def post(self):
         block_json = self.request.body
         block = tornado.escape.json_decode(block_json)
         assert isinstance(block, list)
 
         block_hash = block[0]
+        if block_hash in self.arrived_block_hash:
+            self.finish({})
+            return
+
         conn = database.get_conn()
         c = conn.cursor()
         c.execute("SELECT * FROM chain WHERE hash = ?", (block_hash,))
@@ -377,6 +382,7 @@ class GossipHandler(tornado.web.RequestHandler):
             host, port, pk = names[block_data['pirmary']]
 
             fetch_chain(host, port, block_hash)
+            self.arrived_block_hash.add(block_hash)
 
         self.finish({})
 
@@ -467,3 +473,9 @@ class GetBlockHandler(tornado.web.RequestHandler):
         print('GetBlockHandler', block)
 
         self.finish({'block': list(block[1:])})
+
+
+class TestShutdownHandler(tornado.web.RequestHandler):
+    def get(self):
+        pass
+        tornado.ioloop.IOLoop.instance().stop()

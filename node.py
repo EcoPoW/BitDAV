@@ -62,6 +62,7 @@ def main():
                                             (r'/\*get_block', chain.GetBlockHandler),
                                             (r'/\*invite', chain.InviteHandler),
                                             (r'/\*go', chain.GoHandler),
+                                            (r'/\*test_shutdown', chain.TestShutdownHandler),
                                             # (r'/\*leave', chain.LeaveHandler),
                                             # (r'/\*join_request', chain.JoinRequestHandler),
                                             # (r'/\*join_approve', chain.JoinApproveHandler),
