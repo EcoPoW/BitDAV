@@ -69,8 +69,8 @@ def main():
                                             # (r'/\*get_nodes', TestHandler),
 
                                             (r'/\*add_folder', fs.AddFolderHandler),
-                                            (r'/\*add_files', fs.AddFilesHandler),
-                                            (r'/\*remove_files', fs.RemoveFilesHandler),
+                                            (r'/\*update_folder', fs.UpdateFolderHandler),
+                                            (r'/\*remove_folder', fs.RemoveFolderHandler),
                                             (r'/\*add_device', fs.AddDeviceHandler),
                                             (r'/\*set_device', fs.SetDeviceHandler),
 

@@ -7,12 +7,8 @@ import time
 import pprint
 
 from chunk import chunks_to_partition
+from chunk import MAX_CHUNK_SIZE
 
-# put file folder / filename
-# chunk.py / filename
-
-# will generate a meta for folder and file chunks
-MAX_CHUNK_SIZE = 1024*1024*10
 
 # group 0
 # pc1 300M

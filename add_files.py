@@ -6,52 +6,8 @@ import json
 import time
 import pprint
 
-# put file folder / file_name
-# chunk.py / file_name
+# add_files.py folder_name file_name ...
 
-# will generate a meta for folder and file chunks
-MAX_CHUNK_SIZE = 1024*1024*10
-
-# group 0
-# pc1 300M
-# pc2 1500M
-group0_quota = [1024*1024*100, 1024*1024*1600]
-# group0_device_no = len(group0_quota)
-# group0_current_device_index = 0
-# quota = group0_quota[group0_current_device_index]
-# group 1
-# pc3 200M
-# pc4 300M
-
-
-def mt_combine(hash_list, algorithm):
-    l = len(hash_list)
-    m = l % 2
-    result = []
-    for i in range(0, l - m, 2):
-        # print(hash_list[i][0], hash_list[i+1][0])
-        result.append((hash_list[i][-1], hash_list[i+1][-1], algorithm((hash_list[i][-1] + hash_list[i+1][-1]).encode("utf8")).hexdigest()))
-    result.extend(hash_list[l-m:])
-    return result
-
-def chunks_to_partition(chunks, partition_free_sizes):
-    # chunks: [(chunk_hash, chunk_size), ...]
-    # partition_free_sizes: [free_size, ...]
-    result = {}
-    left_free_sizes = []
-    index = 0
-    free_size = partition_free_sizes[index]
-    for chunk in chunks:
-        chunk_hash = chunk[0]
-        chunk_size = chunk[1]
-        if free_size < chunk_size:
-            left_free_sizes.append(free_size)
-            index += 1
-            free_size = partition_free_sizes[index]
-        free_size -= chunk_size
-        result[chunk] = index
-    left_free_sizes.append(free_size)
-    return result, left_free_sizes
 
 if __name__ == '__main__':
     print(sys.argv[2:])
