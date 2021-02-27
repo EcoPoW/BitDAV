@@ -359,6 +359,7 @@ class GossipHandler(tornado.web.RequestHandler):
         assert isinstance(block, list)
 
         block_hash = block[0]
+        prev_block_hash = block[1]
         if block_hash in self.arrived_block_hash:
             self.finish({})
             return
@@ -368,9 +369,21 @@ class GossipHandler(tornado.web.RequestHandler):
         c.execute("SELECT * FROM chain WHERE hash = ?", (block_hash,))
         blocks = c.fetchall()
         # if c.rowcount == 0:
+        is_fetch_required = False
         if not blocks:
             c.execute("INSERT INTO chain(hash, prev_hash, height, timestamp, data) VALUES (?, ?, ?, ?, ?)", tuple(block))
             conn.commit()
+            print(c.lastrowid)
+            self.arrived_block_hash.add(block_hash)
+
+            # c.execute("SELECT * FROM chain WHERE id = ?", (c.lastrowid, ))
+            # block = c.fetchone()
+            if prev_block_hash == chain_longest[-1][1]:
+                chain_longest.append([c.lastrowid]+block)
+            else:
+                is_fetch_required = True
+                names, pirmary = get_names()
+                host, port, pk = names[pirmary]
 
         # get host and port from the new pirmary
         block_data_json = block[4]
@@ -380,9 +393,10 @@ class GossipHandler(tornado.web.RequestHandler):
             names, pirmary = get_names()
             print('GossipHandler', block_hash, names[block_data['pirmary']])
             host, port, pk = names[block_data['pirmary']]
+            is_fetch_required = True
 
+        if is_fetch_required:
             fetch_chain(host, port, block_hash)
-            self.arrived_block_hash.add(block_hash)
 
         self.finish({})
 

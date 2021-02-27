@@ -45,10 +45,7 @@ class TestHandler(tornado.web.RequestHandler):
 class AddFolderHandler(tornado.web.RequestHandler):
     def get(self):
         names = get_folders()
-        self.write('<br>')
-        self.write(names)
-        self.write('<br>')
-        self.finish('<form method="POST"><input name="folder"/><input type="submit" value="Add"/></form>')
+        self.finish('%s<br><form method="POST"><input name="folder"/><input type="submit" value="Add"/></form>' % names)
 
     @tornado.gen.coroutine
     def post(self):
@@ -84,9 +81,17 @@ class RemoveFolderHandler(tornado.web.RequestHandler):
     def get(self):
         self.finish('chain test')
 
+    @tornado.gen.coroutine
+    def post(self):
+        folder_name = self.get_argument('folder')
+
 class AddFilesHandler(tornado.web.RequestHandler):
     def get(self):
-        self.finish('chain test')
+        self.finish('%s<br><form method="POST"><input name="folder"/><input name="file"/><input type="submit" value="Add"/></form>' % names)
+
+    @tornado.gen.coroutine
+    def post(self):
+        file_name = self.get_argument('file')
 
 class RemoveFilesHandler(tornado.web.RequestHandler):
     def get(self):
