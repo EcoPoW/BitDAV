@@ -42,6 +42,11 @@ class TestHandler(tornado.web.RequestHandler):
         self.finish('chain test')
 
 
+class GetFolderHandler(tornado.web.RequestHandler):
+    def get(self):
+        self.finish('chain test')
+
+
 class AddFolderHandler(tornado.web.RequestHandler):
     def get(self):
         names = get_folders()
@@ -87,21 +92,28 @@ class RemoveFolderHandler(tornado.web.RequestHandler):
 
 class UpdateFolderHandler(tornado.web.RequestHandler):
     def get(self):
+        folder_name = self.get_argument('folder_name')
         names = get_folders()
+        assert folder_name in names
+        folder_meta_hash = names.get(folder_name)
+
         self.finish('%s<br><form method="POST"><input name="folder_name"/><input name="folder_meta_hash"/><input type="submit" value="Update"/></form>' % names)
 
     @tornado.gen.coroutine
     def post(self):
-        names = get_folders()
         folder_name = self.get_argument('folder_name')
         folder_meta_hash = self.get_argument('folder_meta_hash')
-        folder_meta_hash = names.get(folder_name)
+
+        names = get_folders()
+        assert folder_name in names
+        # folder_meta_hash = names.get(folder_name)
+        # assert folder_meta_hash
         # folder_meta_data = {'type':'folder_meta', 'name': folder_name, 'items':[]}
         # if folder_meta_hash:
-        #     with open('pc1/meta/%s' % folder_meta_hash, 'rb') as f:
-        #         folder_meta_json = f.read()
-        #         folder_meta_data = tornado.escape.json_decode(folder_meta_json)
-        #         assert folder_meta_data['type'] == 'folder_meta'
+        with open('pc1/meta/%s' % folder_meta_hash, 'rb') as f:
+            folder_meta_json = f.read()
+            folder_meta_data = tornado.escape.json_decode(folder_meta_json)
+            assert folder_meta_data['type'] == 'folder_meta'
 
         # with open(file_name, 'rb') as f:
         #     # group0 = []

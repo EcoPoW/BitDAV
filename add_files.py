@@ -6,6 +6,11 @@ import json
 import time
 import pprint
 
+from chunk import MAX_CHUNK_SIZE
+from chunk import group0_quota
+
+from chunk import mt_combine
+from chunk import chunks_to_partition
 # add_files.py folder_name file_name ...
 
 
@@ -28,7 +33,7 @@ if __name__ == '__main__':
                 file_size += chunk_size
                 # print(chunk_hash, chunk_size)
                 # chunks.append([chunk_hash, chunk_size, group0_device_no-len(group0_quota)])
-                file_chunks.append([chunk_hash, chunk_size])
+                file_chunks.append((chunk_hash, chunk_size))
                 # write file
                 # if quota < chunk_size:
                 #     group0_current_device_index += 1

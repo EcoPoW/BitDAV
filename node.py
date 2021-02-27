@@ -68,6 +68,7 @@ def main():
                                             # (r'/\*join_approve', chain.JoinApproveHandler),
                                             # (r'/\*get_nodes', TestHandler),
 
+                                            (r'/\*get_folder', fs.GetFolderHandler),
                                             (r'/\*add_folder', fs.AddFolderHandler),
                                             (r'/\*update_folder', fs.UpdateFolderHandler),
                                             (r'/\*remove_folder', fs.RemoveFolderHandler),
