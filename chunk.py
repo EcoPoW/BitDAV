@@ -10,7 +10,7 @@ import pprint
 # chunk.py / file_name
 
 # will generate a meta for folder and file chunks
-MAX_CHUNK_SIZE = 1024*1024*10
+MAX_CHUNK_SIZE = 1024*1024*8 #8/32/128
 
 # group 0
 # pc1 300M

@@ -6,8 +6,8 @@ import json
 import time
 import pprint
 
-from chunk import chunks_to_partition
 from chunk import MAX_CHUNK_SIZE
+from chunk import chunks_to_partition
 
 
 # group 0

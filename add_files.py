@@ -5,6 +5,9 @@ import hashlib
 import json
 import time
 import pprint
+import urllib.parse
+
+import requests
 
 from chunk import MAX_CHUNK_SIZE
 from chunk import group0_quota
@@ -15,9 +18,21 @@ from chunk import chunks_to_partition
 
 
 if __name__ == '__main__':
-    print(sys.argv[2:])
+    print('files', sys.argv[2:])
     folder_name = sys.argv[1]
-    folder_meta_data = {'type':'folder_meta', 'name': folder_name, 'items':[]}
+    res = requests.get('http://127.0.0.1:8001/*get_folder?folder_name=%s' % urllib.parse.quote(folder_name))
+    print('get_folder', res.json())
+    folder_meta_hash = res.json()['meta_hash']
+
+    if folder_meta_hash:
+        with open('pc1/meta/%s' % folder_meta_hash, 'rb') as f:
+            folder_meta_json = f.read()
+            folder_meta_data = json.loads(folder_meta_json)
+            assert folder_meta_data['type'] == 'folder_meta'
+
+    else:
+        folder_meta_data = {'type':'folder_meta', 'name': folder_name, 'items':[]}
+
     for file_name in sys.argv[2:]:
         file_chunks = []
         with open(file_name, 'rb') as f:
@@ -69,3 +84,6 @@ if __name__ == '__main__':
     with open('pc1/meta/%s' % folder_meta_hash, 'wb') as f:
         f.write(folder_meta_json)
     print('folder_meta_hash', folder_meta_hash, len(folder_meta_json))
+
+    res = requests.post('http://127.0.0.1:8001/*update_folder', {'folder_name': folder_name, 'folder_meta_hash': folder_meta_hash})
+    print('update_folder', res.text)

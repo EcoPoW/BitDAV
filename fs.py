@@ -29,10 +29,10 @@ def get_folders(reload=False):
             if block_data.get('type') == 'folder':
                 # if 'name' in block_data:
                 name = block_data['name']
-                # meta_hash = block_data['hash']
+                meta_hash = block_data.get('meta_hash', '')
                 # update_time = block_data['update_time']
                 # if name:
-                folder_names[name] = ''#[items, update_time]
+                folder_names[name] = meta_hash #[items, update_time]
     print('get_folders', folder_names)
     return folder_names
 
@@ -44,17 +44,20 @@ class TestHandler(tornado.web.RequestHandler):
 
 class GetFolderHandler(tornado.web.RequestHandler):
     def get(self):
-        self.finish('chain test')
+        folder_name = self.get_argument('folder_name')
+        names = get_folders()
+        folder_meta_hash = names.get(folder_name, '')
+        self.finish({'name': folder_name, 'meta_hash': folder_meta_hash})
 
 
 class AddFolderHandler(tornado.web.RequestHandler):
     def get(self):
         names = get_folders()
-        self.finish('%s<br><form method="POST"><input name="folder"/><input type="submit" value="Add"/></form>' % names)
+        self.finish('%s<br><form method="POST"><input name="folder_name"/><input type="submit" value="Add"/></form>' % names)
 
     @tornado.gen.coroutine
     def post(self):
-        folder_name = self.get_argument('folder')
+        folder_name = self.get_argument('folder_name')
 
         #fetch to get name and pk
         # assert ':' in addr
@@ -72,7 +75,7 @@ class AddFolderHandler(tornado.web.RequestHandler):
         # rsp = tornado.escape.json_decode(response.body)
 
         # need to check if the name already exists in the chain
-        block_data = {'type': 'folder', 'name': folder_name, 'timestamp': time.time()}
+        block_data = {'type': 'folder', 'name': folder_name, 'meta_hash': '', 'timestamp': time.time()}
         block = chain.update_chain(block_data)
         chain.broadcast_block(list(block))
 
@@ -88,7 +91,7 @@ class RemoveFolderHandler(tornado.web.RequestHandler):
 
     @tornado.gen.coroutine
     def post(self):
-        folder_name = self.get_argument('folder')
+        folder_name = self.get_argument('folder_name')
 
 class UpdateFolderHandler(tornado.web.RequestHandler):
     def get(self):
@@ -164,6 +167,10 @@ class UpdateFolderHandler(tornado.web.RequestHandler):
         # with open('pc1/meta/%s' % folder_meta_hash, 'wb') as f:
         #     f.write(folder_meta_json)
         # print('folder_meta_hash', folder_meta_hash, len(folder_meta_json))
+
+        block_data = {'type': 'folder', 'name': folder_name, 'meta_hash': folder_meta_hash, 'timestamp': time.time()}
+        block = chain.update_chain(block_data)
+        chain.broadcast_block(list(block))
 
         self.finish({})
 
