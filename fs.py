@@ -178,6 +178,17 @@ class UpdateFolderHandler(tornado.web.RequestHandler):
 #     def get(self):
 #         self.finish('chain test')
 
+
+class GetMetaHandler(tornado.web.RequestHandler):
+    def get(self):
+        folder_meta_hash = self.get_argument('folder_meta_hash')
+        with open('pc1/meta/%s' % folder_meta_hash, 'rb') as f:
+            folder_meta_json = f.read()
+            folder_meta_data = tornado.escape.json_decode(folder_meta_json)
+            assert folder_meta_data['type'] == 'folder_meta'
+            self.finish(folder_meta_json)
+
+
 class AddDeviceHandler(tornado.web.RequestHandler):
     def get(self):
         self.finish('chain test')

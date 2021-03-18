@@ -15,7 +15,7 @@ MAX_CHUNK_SIZE = 1024*1024*8 #8/32/128
 # group 0
 # pc1 300M
 # pc2 1500M
-group0_quota = [1024*1024*100, 1024*1024*1600]
+group0_quota = [1024*1024*4100, 1024*1024*1600]
 # group0_device_no = len(group0_quota)
 # group0_current_device_index = 0
 # quota = group0_quota[group0_current_device_index]

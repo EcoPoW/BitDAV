@@ -28,8 +28,8 @@ import tornado.httpserver
 import tornado.ioloop
 import tornado.wsgi
 
-from wsgidav import wsgidav_app
-from wsgidav.fs_dav_provider import FilesystemProvider
+# from wsgidav import wsgidav_app
+# from wsgidav.fs_dav_provider import FilesystemProvider
 
 
 import chain
@@ -37,23 +37,22 @@ import fs
 
 
 def main():
-    #  config = wsgidav_app._initConfig()
-    provider = FilesystemProvider('.')
-    config = {
-        "provider_mapping": {"/": provider},
-        "http_authenticator": {
-            "domain_controller": None  # None: dc.simple_dc.SimpleDomainController(user_mapping)
-        },
-        "simple_dc": {
-            "user_mapping": {"*": True}
-        },  # anonymous access
-        "verbose": 1,
-        "enable_loggers": [],
-        "property_manager": True,  # True: use property_manager.PropertyManager
-        "lock_manager": True,  # True: use lock_manager.LockManager
-        # "port": 8000
-    }
-    wsgi_app = wsgidav_app.WsgiDAVApp(config)
+    # provider = FilesystemProvider('.')
+    # config = {
+    #     "provider_mapping": {"/": provider},
+    #     "http_authenticator": {
+    #         "domain_controller": None  # None: dc.simple_dc.SimpleDomainController(user_mapping)
+    #     },
+    #     "simple_dc": {
+    #         "user_mapping": {"*": True}
+    #     },  # anonymous access
+    #     "verbose": 1,
+    #     "enable_loggers": [],
+    #     "property_manager": True,  # True: use property_manager.PropertyManager
+    #     "lock_manager": True,  # True: use lock_manager.LockManager
+    #     # "port": 8000
+    # }
+    # wsgi_app = wsgidav_app.WsgiDAVApp(config)
     settings = {"debug": True}
     application = tornado.web.Application([ (r'/\*gossip', chain.GossipHandler),
                                             (r'/\*hello', chain.HelloHandler),
@@ -72,11 +71,12 @@ def main():
                                             (r'/\*add_folder', fs.AddFolderHandler),
                                             (r'/\*update_folder', fs.UpdateFolderHandler),
                                             (r'/\*remove_folder', fs.RemoveFolderHandler),
+                                            (r'/\*get_meta', fs.GetMetaHandler),
                                             (r'/\*add_device', fs.AddDeviceHandler),
                                             (r'/\*set_device', fs.SetDeviceHandler),
 
                                             (r'/\*test', chain.TestHandler),
-            (r'.*', tornado.web.FallbackHandler, dict(fallback=tornado.wsgi.WSGIContainer(wsgi_app))),
+            # (r'.*', tornado.web.FallbackHandler, dict(fallback=tornado.wsgi.WSGIContainer(wsgi_app))),
         ], **settings)
 
     server = tornado.httpserver.HTTPServer(application)

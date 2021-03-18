@@ -46,7 +46,7 @@ if __name__ == '__main__':
                 chunk_hash = hashlib.sha256(data).hexdigest()
                 chunk_size = len(data)
                 file_size += chunk_size
-                # print(chunk_hash, chunk_size)
+                print(chunk_hash, chunk_size)
                 # chunks.append([chunk_hash, chunk_size, group0_device_no-len(group0_quota)])
                 file_chunks.append((chunk_hash, chunk_size))
                 # write file
