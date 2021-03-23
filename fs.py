@@ -189,11 +189,19 @@ class GetMetaHandler(tornado.web.RequestHandler):
             self.finish(folder_meta_json)
 
 
-class AddDeviceHandler(tornado.web.RequestHandler):
+class AddStorageHandler(tornado.web.RequestHandler):
+    def get(self):
+        storages = "<br>"
+        self.finish('%s<br><form method="POST"><input name="storage_name"/><input name="storage_path"/><input type="submit" value="Add"/></form>' % storages)
+
+    def post(self):
+        storage_name = self.get_argument('storage_name')
+        storage_path = self.get_argument('storage_path')
+
+class UpdateStorageHandler(tornado.web.RequestHandler):
     def get(self):
         self.finish('chain test')
 
-class SetDeviceHandler(tornado.web.RequestHandler):
-    def get(self):
-        self.finish('chain test')
-
+    def post(self):
+        storage_name = self.get_argument('storage_name')
+        storage_path = self.get_argument('storage_path')

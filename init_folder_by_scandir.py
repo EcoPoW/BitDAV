@@ -18,7 +18,7 @@ from chunk import chunks_to_partition
 
 
 if __name__ == '__main__':
-    print('folder', sys.argv[2:])
+    print('folders', sys.argv[2:])
     folder_name = sys.argv[1]
     # res = requests.get('http://127.0.0.1:8001/*get_folder?folder_name=%s' % urllib.parse.quote(folder_name))
     # print('get_folder', res.json())
@@ -33,10 +33,12 @@ if __name__ == '__main__':
     # else:
     #     folder_meta_data = {'type':'folder_meta', 'name': folder_name, 'items':[]}
 
+    os.makedirs('meta/', exist_ok=True)
+    # os.mkdir('blob/')
     for i in '0123456789abcdef':
         for j in '0123456789abcdef':
             for k in '0123456789abcdef':
-                os.mkdir(i+k+j)
+                os.makedirs('blob/'+i+k+j, exist_ok=True)
 
     folder_meta_data = {'type':'folder_meta', 'name': folder_name, 'items':[]}
 
@@ -45,8 +47,11 @@ if __name__ == '__main__':
         files = os.scandir(folder_name)
 
         for f in files:
+            # print(dir(f))
             file_name = folder_name+f.name
             file_chunks = []
+            if f.is_dir():
+                continue
             with open(file_name, 'rb') as f:
                 # group0 = []
                 file_size = 0
@@ -62,7 +67,7 @@ if __name__ == '__main__':
                     # chunks.append([chunk_hash, chunk_size, group0_device_no-len(group0_quota)])
                     file_chunks.append((chunk_hash, chunk_size))
                     # write file
-                    with open('pc1/blob/%s' % chunk_hash, 'wb') as fw:
+                    with open('blob/%s' % chunk_hash, 'wb') as fw:
                         fw.write(data)
                     # if quota < chunk_size:
                     #     group0_current_device_index += 1
@@ -95,7 +100,7 @@ if __name__ == '__main__':
 
         folder_meta_json = json.dumps(folder_meta_data).encode()
         folder_meta_hash = hashlib.sha256(folder_meta_json).hexdigest()
-        with open('pc1/meta/%s' % folder_meta_hash, 'wb') as f:
+        with open('meta/%s' % folder_meta_hash, 'wb') as f:
             f.write(folder_meta_json)
         print('folder_meta_hash', folder_meta_hash, len(folder_meta_json))
 
