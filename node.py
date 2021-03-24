@@ -72,7 +72,7 @@ def main():
                                             (r'/\*update_folder', fs.UpdateFolderHandler),
                                             (r'/\*remove_folder', fs.RemoveFolderHandler),
                                             (r'/\*get_meta', fs.GetMetaHandler),
-                                            (r'/\*add_storage', fs.AddStorageHandler),
+                                            # (r'/\*add_storage', fs.AddStorageHandler),
                                             (r'/\*update_storage', fs.UpdateStorageHandler),
 
                                             (r'/\*test', chain.TestHandler),

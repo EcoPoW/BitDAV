@@ -25,7 +25,7 @@ if __name__ == '__main__':
     folder_meta_hash = res.json()['meta_hash']
 
     if folder_meta_hash:
-        with open('pc1/meta/%s' % folder_meta_hash, 'rb') as f:
+        with open('meta/%s' % folder_meta_hash, 'rb') as f:
             folder_meta_json = f.read()
             folder_meta_data = json.loads(folder_meta_json)
             assert folder_meta_data['type'] == 'folder_meta'
@@ -81,7 +81,7 @@ if __name__ == '__main__':
 
     folder_meta_json = json.dumps(folder_meta_data).encode()
     folder_meta_hash = hashlib.sha256(folder_meta_json).hexdigest()
-    with open('pc1/meta/%s' % folder_meta_hash, 'wb') as f:
+    with open('meta/%s' % folder_meta_hash, 'wb') as f:
         f.write(folder_meta_json)
     print('folder_meta_hash', folder_meta_hash, len(folder_meta_json))
 
