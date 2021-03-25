@@ -127,7 +127,9 @@ class UpdateFolderHandler(tornado.web.RequestHandler):
             self.finish('no storage config')
             return
 
-        for storage_path in storages.values():
+        for storage_payload in storages.values():
+            storage_path = storage_payload[0]
+            node_name = storage_payload[1]
             with open('%s/meta/%s' % (storage_path, folder_meta_hash), 'rb') as f:
                 folder_meta_json = f.read()
                 folder_meta_data = tornado.escape.json_decode(folder_meta_json)
