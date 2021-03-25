@@ -185,9 +185,9 @@ def get_names(reload=False):
         for block in get_chain():
             block_data_json = block[5]
             block_data = tornado.escape.json_decode(block_data_json)
-            print('get_names', block_data)
             # print(names)
             if block_data.get('type') == 'name':
+                print('get_names block', block_data)
                 if 'name' in block_data:
                     name = block_data['name']
                     host = block_data['host']

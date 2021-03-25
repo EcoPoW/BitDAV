@@ -24,9 +24,9 @@ def get_folders(reload=False):
         for block in chain.get_chain():
             block_data_json = block[5]
             block_data = tornado.escape.json_decode(block_data_json)
-            print('get_folders', block_data)
             # print(names)
             if block_data.get('type') == 'folder':
+                print('get_folders block', block_data)
                 # if 'name' in block_data:
                 name = block_data['name']
                 meta_hash = block_data.get('meta_hash', '')
@@ -45,15 +45,15 @@ def get_storages(reload=False):
         for block in chain.get_chain():
             block_data_json = block[5]
             block_data = tornado.escape.json_decode(block_data_json)
-            print('get_storages', block_data)
             # print(names)
             if block_data.get('type') == 'storage':
+                print('get_storages block', block_data)
                 # if 'name' in block_data:
                 name = block_data['name']
                 path = block_data.get('path', '')
-                # update_time = block_data['update_time']
+                node_name = block_data.get('node_name', '')
                 # if name:
-                storage_names[name] = path #[items, update_time]
+                storage_names[name] = [path, node_name]
     print('get_storages', storage_names)
     return storage_names
 
@@ -74,7 +74,9 @@ class GetFolderHandler(tornado.web.RequestHandler):
 class AddFolderHandler(tornado.web.RequestHandler):
     def get(self):
         names = get_folders()
-        self.finish('%s<br><form method="POST"><input name="folder_name"/><input type="submit" value="Add"/></form>' % names)
+        self.finish('''%s<br><form method="POST">
+            <input name="folder_name" placeholder="Folder" />
+            <input type="submit" value="Add"/></form>''' % names)
 
     @tornado.gen.coroutine
     def post(self):
@@ -103,7 +105,10 @@ class UpdateFolderHandler(tornado.web.RequestHandler):
         assert folder_name in names
         folder_meta_hash = names.get(folder_name)
 
-        self.finish('%s<br><form method="POST"><input name="folder_name"/><input name="folder_meta_hash"/><input type="submit" value="Update"/></form>' % names)
+        self.finish('''%s<br><form method="POST">
+            <input name="folder_name" placeholder="Folder" />
+            <input name="folder_meta_hash" placeholder="Meta Hash" />
+            <input type="submit" value="Update"/></form>''' % names)
 
     @tornado.gen.coroutine
     def post(self):
@@ -160,13 +165,16 @@ class GetMetaHandler(tornado.web.RequestHandler):
 class UpdateStorageHandler(tornado.web.RequestHandler):
     def get(self):
         storages = get_storages()
-        self.finish('%s<br><form method="POST"><input name="storage_name"/><input name="storage_path"/><input type="submit" value="Update"/></form>' % storages)
+        self.finish('''%s<br><form method="POST">
+            <input name="storage_name" placeholder="Storage Name" />
+            <input name="storage_path" placeholder="Storage Path" />
+            <input type="submit" value="Update" /></form>''' % storages)
 
     def post(self):
         storage_name = self.get_argument('storage_name')
         storage_path = self.get_argument('storage_path')
 
-        block_data = {'type': 'storage', 'name': storage_name, 'path': storage_path, 'timestamp': time.time()}
+        block_data = {'type': 'storage', 'name': storage_name, 'path': storage_path, 'node_name': chain.current_name, 'timestamp': time.time()}
         block = chain.update_chain(block_data)
         chain.broadcast_block(list(block))
 
