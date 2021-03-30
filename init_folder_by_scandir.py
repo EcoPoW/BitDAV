@@ -40,14 +40,13 @@ if __name__ == '__main__':
             for k in '0123456789abcdef':
                 os.makedirs('blob/'+i+k+j, exist_ok=True)
 
-    folder_meta_data = {'type':'folder_meta', 'name': folder_name, 'items':[]}
+    folder_meta_data = {'type':'folder_meta', 'name': folder_name, 'items':{}}
 
 
     for folder_name in sys.argv[2:]:
         files = os.scandir(folder_name)
 
         for f in files:
-            # print(dir(f))
             file_name = folder_name+f.name
             file_chunks = []
             if f.is_dir():
@@ -90,9 +89,10 @@ if __name__ == '__main__':
                 hash_list = mt_combine(hash_list, hashlib.sha256)
             merkle_root = hash_list[0][-1]
 
-
-            file_meta_data = [os.path.basename(file_name), merkle_root, file_size, time.time(), chunks]
-            folder_meta_data['items'].append(file_meta_data)
+            item_name = f.name
+            file_meta_data = [merkle_root, file_size, time.time(), chunks]
+            assert item_name not in folder_meta_data['items']
+            folder_meta_data['items'][item_name] = file_meta_data
             # pprint.pprint(file_meta_data)
             # file_meta_json = json.dumps(file_meta_data).encode()
             # file_meta_hash = hashlib.sha256(file_meta_json).hexdigest()
