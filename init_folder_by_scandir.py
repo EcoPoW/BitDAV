@@ -16,6 +16,8 @@ from chunk import mt_combine
 from chunk import chunks_to_partition
 # init_folder_by_scandir.py folder_name folder1 folder2 ...
 
+items_rename_counter = {}
+
 
 if __name__ == '__main__':
     print('folders', sys.argv[2:])
@@ -47,7 +49,7 @@ if __name__ == '__main__':
         files = os.scandir(folder_name)
 
         for f in files:
-            file_name = folder_name+f.name
+            file_name = folder_name + f.name
             file_chunks = []
             if f.is_dir():
                 continue
@@ -89,10 +91,19 @@ if __name__ == '__main__':
                 hash_list = mt_combine(hash_list, hashlib.sha256)
             merkle_root = hash_list[0][-1]
 
-            item_name = f.name
+            while True:
+                name, ext = os.path.splitext(f.name)
+                unique_name = "%s%s%s" % (os.path.basename(name), items_rename_counter.get(name, ''), ext)
+                if unique_name not in folder_meta_data['items']:
+                    break
+                items_rename_counter.setdefault(name, 1)
+                items_rename_counter[name] += 1
+
+            print(name)
+
             file_meta_data = [merkle_root, file_size, time.time(), chunks]
-            assert item_name not in folder_meta_data['items']
-            folder_meta_data['items'][item_name] = file_meta_data
+            assert unique_name not in folder_meta_data['items']
+            folder_meta_data['items'][unique_name] = file_meta_data
             # pprint.pprint(file_meta_data)
             # file_meta_json = json.dumps(file_meta_data).encode()
             # file_meta_hash = hashlib.sha256(file_meta_json).hexdigest()
