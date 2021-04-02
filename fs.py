@@ -63,6 +63,17 @@ class TestHandler(tornado.web.RequestHandler):
         self.finish('chain test')
 
 
+class ListFoldersHandler(tornado.web.RequestHandler):
+    def get(self):
+        for folder in get_folders():
+            self.write(str(folder)+'<br>\n')
+        self.finish('list folders test\n')
+
+class ListFilesHandler(tornado.web.RequestHandler):
+    def get(self):
+        folder_name = self.get_argument('folder_name')
+        self.finish('list files test\n')
+
 class GetFolderHandler(tornado.web.RequestHandler):
     def get(self):
         folder_name = self.get_argument('folder_name')
