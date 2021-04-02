@@ -7,7 +7,7 @@ import time
 import pprint
 import urllib.parse
 
-import requests
+# import requests
 
 from chunk import MAX_CHUNK_SIZE
 from chunk import group0_quota
@@ -19,10 +19,10 @@ from chunk import chunks_to_partition
 
 def main():
     print('files', sys.argv[2:])
-    folder_name = sys.argv[1]
-    res = requests.get('http://127.0.0.1:8001/*get_folder?folder_name=%s' % urllib.parse.quote(folder_name))
-    print('get_folder', res.json())
-    folder_meta_hash = res.json()['meta_hash']
+    # folder_name = sys.argv[1]
+    # res = requests.get('http://127.0.0.1:8001/*get_folder?folder_name=%s' % urllib.parse.quote(folder_name))
+    # print('get_folder', res.json())
+    folder_meta_hash = sys.argv[1]
 
     if folder_meta_hash:
         with open('meta/%s' % folder_meta_hash, 'rb') as f:
@@ -31,7 +31,7 @@ def main():
             assert folder_meta_data['type'] == 'folder_meta'
 
     else:
-        folder_meta_data = {'type':'folder_meta', 'name': folder_name, 'items':{}}
+        return
 
     items_rename_counter = {}
     for file_name in sys.argv[2:]:
@@ -51,6 +51,8 @@ def main():
                 # chunks.append([chunk_hash, chunk_size, group0_device_no-len(group0_quota)])
                 file_chunks.append((chunk_hash, chunk_size))
                 # write file
+                with open('blob/%s/%s' % (chunk_hash[:3], chunk_hash[3:]), 'wb') as fw:
+                    fw.write(data)
                 # if quota < chunk_size:
                 #     group0_current_device_index += 1
                 #     quota = group0_quota[group0_current_device_index]
@@ -94,8 +96,8 @@ def main():
         f.write(folder_meta_json)
     print('folder_meta_hash', folder_meta_hash, len(folder_meta_json))
 
-    res = requests.post('http://127.0.0.1:8001/*update_folder', {'folder_name': folder_name, 'folder_meta_hash': folder_meta_hash})
-    print('update_folder', res.text)
+    # res = requests.post('http://127.0.0.1:8001/*update_folder', {'folder_name': folder_name, 'folder_meta_hash': folder_meta_hash})
+    # print('update_folder', res.text)
 
 if __name__ == '__main__':
     main()

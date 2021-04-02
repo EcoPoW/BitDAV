@@ -68,7 +68,7 @@ if __name__ == '__main__':
                     # chunks.append([chunk_hash, chunk_size, group0_device_no-len(group0_quota)])
                     file_chunks.append((chunk_hash, chunk_size))
                     # write file
-                    with open('blob/%s' % chunk_hash, 'wb') as fw:
+                    with open('blob/%s/%s' % (chunk_hash[:3], chunk_hash[3:]), 'wb') as fw:
                         fw.write(data)
                     # if quota < chunk_size:
                     #     group0_current_device_index += 1
@@ -98,8 +98,6 @@ if __name__ == '__main__':
                     break
                 items_rename_counter.setdefault(name, 1)
                 items_rename_counter[name] += 1
-
-            print(name)
 
             file_meta_data = [merkle_root, file_size, time.time(), chunks]
             assert unique_name not in folder_meta_data['items']
