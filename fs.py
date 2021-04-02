@@ -73,7 +73,24 @@ class ListFilesHandler(tornado.web.RequestHandler):
     def get(self):
         folder_name = self.get_argument('folder_name')
         folders = get_folders()
-        self.write('%s %s<br>\n' % (folder_name, folders.get(folder_name, '')))
+        folder_meta_hash = folders.get(folder_name, '')
+
+        storages = get_storages()
+        for storage_name, storage_payload in storages:
+            storage_path = storage_payload[0]
+            node_name = storage_payload[1]
+            if node_name == chain.current_name:
+                if os.path.exists('%s/meta/%s' % (storage_path, folder_meta_hash)):
+                    with open('%s/meta/%s' % (storage_path, folder_meta_hash), 'rb') as f:
+                        folder_meta_json = f.read()
+                        folder_meta_data = tornado.escape.json_decode(folder_meta_json)
+                        assert folder_meta_data['type'] == 'folder_meta'
+                        break
+
+        self.write('Node name %s storage path %s<br>\n' % (node_name, storage_path))
+        self.write('%s %s<br>\n' % (folder_name, folder_meta_hash))
+        for item_name, file_meta_data in folder_meta_data['items'].items():
+            self.write('%s %s <br>\n' % (item_name, str(file_meta_data)))
         self.finish('\n')
 
 class GetFolderHandler(tornado.web.RequestHandler):
