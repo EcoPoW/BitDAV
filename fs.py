@@ -63,11 +63,24 @@ class TestHandler(tornado.web.RequestHandler):
         self.finish('chain test')
 
 
+class ListFoldersHandler(tornado.web.RequestHandler):
+    def get(self):
+        for folder_name in get_folders():
+            self.write('<a href="/*list_files?folder_name=%s">List</a> %s<br>\n' % (folder_name, folder_name))
+        self.finish('\n')
+
+class ListFilesHandler(tornado.web.RequestHandler):
+    def get(self):
+        folder_name = self.get_argument('folder_name')
+        folders = get_folders()
+        self.write('%s %s<br>\n' % (folder_name, folders.get(folder_name, '')))
+        self.finish('\n')
+
 class GetFolderHandler(tornado.web.RequestHandler):
     def get(self):
         folder_name = self.get_argument('folder_name')
-        names = get_folders()
-        folder_meta_hash = names.get(folder_name, '')
+        folders = get_folders()
+        folder_meta_hash = folders.get(folder_name, '')
         self.finish({'name': folder_name, 'meta_hash': folder_meta_hash})
 
 
@@ -76,7 +89,7 @@ class AddFolderHandler(tornado.web.RequestHandler):
         names = get_folders()
         self.finish('''%s<br><form method="POST">
             <input name="folder_name" placeholder="Folder" />
-            <input type="submit" value="Add"/></form>''' % names)
+            <input type="submit" value="Add"/></form>\n''' % names)
 
     @tornado.gen.coroutine
     def post(self):

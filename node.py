@@ -59,6 +59,7 @@ def main():
                                             (r'/\*ping', chain.PingHandler),
                                             (r'/\*election', chain.ElectionHandler),
                                             (r'/\*get_block', chain.GetBlockHandler),
+                                            (r'/\*list_blocks', chain.ListBlocksHandler),
                                             (r'/\*invite', chain.InviteHandler),
                                             (r'/\*go', chain.GoHandler),
                                             (r'/\*test_shutdown', chain.TestShutdownHandler),
@@ -67,6 +68,8 @@ def main():
                                             # (r'/\*join_approve', chain.JoinApproveHandler),
                                             # (r'/\*get_nodes', TestHandler),
 
+                                            (r'/\*list_folders', fs.ListFoldersHandler),
+                                            (r'/\*list_files', fs.ListFilesHandler),
                                             (r'/\*get_folder', fs.GetFolderHandler),
                                             (r'/\*add_folder', fs.AddFolderHandler),
                                             (r'/\*update_folder', fs.UpdateFolderHandler),
