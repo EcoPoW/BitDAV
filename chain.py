@@ -479,8 +479,14 @@ class HelloHandler(tornado.web.RequestHandler):
 class ListBlocksHandler(tornado.web.RequestHandler):
     def get(self):
         for block in get_chain():
-            self.write(str(block)+'<br>\n')
-        self.finish('list blocks test\n')
+            block_hash = block[1]
+            parent_hash = block[2]
+            height = block[3]
+            timestamp = block[4]
+            block_data = block[5]
+            self.write('%s %s %s %s<br>\n' % (height, timestamp, block_hash, parent_hash))
+            self.write('%s<br>\n' % block_data)
+        self.finish('\n')
 
 
 class GetBlockHandler(tornado.web.RequestHandler):

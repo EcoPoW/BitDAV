@@ -67,14 +67,14 @@ class ListFoldersHandler(tornado.web.RequestHandler):
     def get(self):
         for folder_name in get_folders():
             self.write('<a href="/*list_files?folder_name=%s">List</a> %s<br>\n' % (folder_name, folder_name))
-        self.finish('list folders test\n')
+        self.finish('\n')
 
 class ListFilesHandler(tornado.web.RequestHandler):
     def get(self):
         folder_name = self.get_argument('folder_name')
         folders = get_folders()
-        self.write('%s %s\n' % (folder_name, folders.get(folder_name, '')))
-        self.finish('list files test\n')
+        self.write('%s %s<br>\n' % (folder_name, folders.get(folder_name, '')))
+        self.finish('\n')
 
 class GetFolderHandler(tornado.web.RequestHandler):
     def get(self):
