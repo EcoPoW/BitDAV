@@ -14,13 +14,14 @@ from chunk import group0_quota
 
 from chunk import mt_combine
 from chunk import chunks_to_partition
-# add_files.py folder_name file_name ...
+# add_files.py IP:PORT folder_name file_name ...
 
 
 def main():
-    print('files', sys.argv[2:])
-    folder_name = sys.argv[1]
-    res = requests.get('http://127.0.0.1:8001/*get_folder?folder_name=%s' % urllib.parse.quote(folder_name))
+    print('files', sys.argv[3:])
+    folder_name = sys.argv[2]
+    ip_and_port = sys.argv[1]
+    res = requests.get('http://%s/*get_folder?folder_name=%s' % (ip_and_port, urllib.parse.quote(folder_name)))
     print('get_folder', res.json())
     folder_meta_hash = res.json()['meta_hash']
 
@@ -94,7 +95,7 @@ def main():
         f.write(folder_meta_json)
     print('folder_meta_hash', folder_meta_hash, len(folder_meta_json))
 
-    res = requests.post('http://127.0.0.1:8001/*update_folder', {'folder_name': folder_name, 'folder_meta_hash': folder_meta_hash})
+    res = requests.post('http://%s/*update_folder' % ip_and_port, {'folder_name': folder_name, 'folder_meta_hash': folder_meta_hash})
     print('update_folder', res.text)
 
 if __name__ == '__main__':

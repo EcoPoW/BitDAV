@@ -14,7 +14,7 @@ from chunk import group0_quota
 
 from chunk import mt_combine
 from chunk import chunks_to_partition
-# init_folder_by_scandir.py folder_name folder1 folder2 ...
+# init_folder_local_by_scandir.py folder_name folder1 folder2 ...
 
 items_rename_counter = {}
 

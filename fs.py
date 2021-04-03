@@ -93,6 +93,16 @@ class ListFilesHandler(tornado.web.RequestHandler):
             self.write('%s %s <br>\n' % (item_name, str(file_meta_data)))
         self.finish('\n')
 
+class GetFoldersHandler(tornado.web.RequestHandler):
+    def get(self):
+        folders = get_folders()
+        result = {"folders": {}}
+        for folder_name, folder_meta_hash in folders.items():
+            # folder_meta_hash = folders.get(folder_name, '')
+            if folder_name and folder_meta_hash:
+                result["folders"][folder_name] = folder_meta_hash
+        self.finish(result)
+
 class GetFolderHandler(tornado.web.RequestHandler):
     def get(self):
         folder_name = self.get_argument('folder_name')
@@ -192,6 +202,21 @@ class GetMetaHandler(tornado.web.RequestHandler):
                     assert folder_meta_data['type'] == 'folder_meta'
                     self.finish(folder_meta_json)
                 break
+
+
+class UpdateMetaHandler(tornado.web.RequestHandler):
+    def post(self):
+        pass
+
+
+class GetBlobHandler(tornado.web.RequestHandler):
+    def get(self):
+        pass
+
+
+class UpdateBlobHandler(tornado.web.RequestHandler):
+    def post(self):
+        pass
 
 
 class UpdateStorageHandler(tornado.web.RequestHandler):

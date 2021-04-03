@@ -14,7 +14,7 @@ from chunk import group0_quota
 
 from chunk import mt_combine
 from chunk import chunks_to_partition
-# get_file.py folder_meta_file
+# get_files_local_with_meta.py folder_meta_file
 
 
 if __name__ == '__main__':

@@ -14,7 +14,7 @@ from chunk import group0_quota
 
 from chunk import mt_combine
 from chunk import chunks_to_partition
-# add_files.py folder_name file_name ...
+# add_files_local.py folder_name file_name ...
 
 
 def main():

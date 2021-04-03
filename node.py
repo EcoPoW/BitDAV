@@ -70,11 +70,15 @@ def main():
 
                                             (r'/\*list_folders', fs.ListFoldersHandler),
                                             (r'/\*list_files', fs.ListFilesHandler),
+                                            (r'/\*get_folders', fs.GetFoldersHandler),
                                             (r'/\*get_folder', fs.GetFolderHandler),
                                             (r'/\*add_folder', fs.AddFolderHandler),
                                             (r'/\*update_folder', fs.UpdateFolderHandler),
-                                            (r'/\*remove_folder', fs.RemoveFolderHandler),
+                                            # (r'/\*remove_folder', fs.RemoveFolderHandler),
                                             (r'/\*get_meta', fs.GetMetaHandler),
+                                            (r'/\*update_meta', fs.UpdateMetaHandler),
+                                            (r'/\*get_blob', fs.GetBlobHandler),
+                                            (r'/\*update_blob', fs.UpdateBlobHandler),
                                             # (r'/\*add_storage', fs.AddStorageHandler),
                                             (r'/\*update_storage', fs.UpdateStorageHandler),
 
