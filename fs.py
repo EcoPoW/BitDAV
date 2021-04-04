@@ -80,8 +80,9 @@ class ListFilesHandler(tornado.web.RequestHandler):
             storage_path = storage_payload[0]
             node_name = storage_payload[1]
             if node_name == chain.current_name:
-                if os.path.exists('%s/meta/%s' % (storage_path, folder_meta_hash)):
-                    with open('%s/meta/%s' % (storage_path, folder_meta_hash), 'rb') as f:
+                folder_meta_path = os.path.join(storage_path, 'meta', folder_meta_hash)
+                if os.path.exists(folder_meta_path):
+                    with open(folder_meta_path, 'rb') as f:
                         folder_meta_json = f.read()
                         folder_meta_data = tornado.escape.json_decode(folder_meta_json)
                         assert folder_meta_data['type'] == 'folder_meta'
@@ -170,10 +171,12 @@ class UpdateFolderHandler(tornado.web.RequestHandler):
         for storage_payload in storages.values():
             storage_path = storage_payload[0]
             node_name = storage_payload[1]
-            with open('%s/meta/%s' % (storage_path, folder_meta_hash), 'rb') as f:
-                folder_meta_json = f.read()
-                folder_meta_data = tornado.escape.json_decode(folder_meta_json)
-                assert folder_meta_data['type'] == 'folder_meta'
+            folder_meta_path = os.path.join(storage_path, 'meta', folder_meta_hash)
+            if os.path.exists(folder_meta_path):
+                with open(folder_meta_path, 'rb') as f:
+                    folder_meta_json = f.read()
+                    folder_meta_data = tornado.escape.json_decode(folder_meta_json)
+                    assert folder_meta_data['type'] == 'folder_meta'
 
         block_data = {'type': 'folder', 'name': folder_name, 'meta_hash': folder_meta_hash, 'timestamp': time.time()}
         block = chain.update_chain(block_data)
@@ -195,8 +198,9 @@ class GetMetaHandler(tornado.web.RequestHandler):
 
         folder_meta_hash = self.get_argument('folder_meta_hash')
         for storage_path in storages.values():
-            if os.path.exists('%s/meta/%s' % (storage_path, folder_meta_hash)):
-                with open('%s/meta/%s' % (storage_path, folder_meta_hash), 'rb') as f:
+            folder_meta_path = os.path.join(storage_path, 'meta', folder_meta_hash)
+            if os.path.exists(folder_meta_path):
+                with open(folder_meta_path, 'rb') as f:
                     folder_meta_json = f.read()
                     folder_meta_data = tornado.escape.json_decode(folder_meta_json)
                     assert folder_meta_data['type'] == 'folder_meta'
@@ -230,9 +234,15 @@ class UpdateStorageHandler(tornado.web.RequestHandler):
     def post(self):
         storage_name = self.get_argument('storage_name')
         storage_path = self.get_argument('storage_path')
+        print('storage_path', storage_path)
 
         block_data = {'type': 'storage', 'name': storage_name, 'path': storage_path, 'node_name': chain.current_name, 'timestamp': time.time()}
         block = chain.update_chain(block_data)
         chain.broadcast_block(list(block))
 
         self.finish({'storage': storage_name, 'block': list(block)})
+
+class GetStorageHandler(tornado.web.RequestHandler):
+    def get(self):
+        pass
+

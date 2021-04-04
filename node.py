@@ -81,6 +81,7 @@ def main():
                                             (r'/\*update_blob', fs.UpdateBlobHandler),
                                             # (r'/\*add_storage', fs.AddStorageHandler),
                                             (r'/\*update_storage', fs.UpdateStorageHandler),
+                                            (r'/\*get_storage', fs.GetStorageHandler),
 
                                             (r'/\*test', chain.TestHandler),
             # (r'.*', tornado.web.FallbackHandler, dict(fallback=tornado.wsgi.WSGIContainer(wsgi_app))),
