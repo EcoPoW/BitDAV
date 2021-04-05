@@ -197,7 +197,7 @@ class GetMetaHandler(tornado.web.RequestHandler):
             return
 
         folder_meta_hash = self.get_argument('folder_meta_hash')
-        for storage_path in storages.values():
+        for storage_path, _ in storages.values():
             folder_meta_path = os.path.join(storage_path, 'meta', folder_meta_hash)
             if os.path.exists(folder_meta_path):
                 with open(folder_meta_path, 'rb') as f:
@@ -244,5 +244,18 @@ class UpdateStorageHandler(tornado.web.RequestHandler):
 
 class GetStorageHandler(tornado.web.RequestHandler):
     def get(self):
-        pass
+        result = {'storages':{}, 'node_name': chain.current_name, 'nodes':[]}
+        storages = get_storages()
+        for storage_name, storage_payload in storages.items():
+            storage_path = storage_payload[0]
+            node_name = storage_payload[1]
+            if node_name == chain.current_name:
+                result['storages'][storage_name] = storage_path
 
+        names, pirmary = chain.get_names()
+        for name, info in names.items():
+            host, port, pk = info
+            if name != chain.current_name:
+                result['nodes'].append([host, port])
+
+        self.finish(result)
