@@ -27,6 +27,13 @@ def main():
     for storage_name, storage_path in res.json()['storages'].items():
         print(storage_name, storage_path)
         storages_path.append(storage_path)
+
+        os.makedirs(os.path.join(storage_path, 'meta'), exist_ok=True)
+        for i in '0123456789abcdef':
+            for j in '0123456789abcdef':
+                for k in '0123456789abcdef':
+                    os.makedirs(os.path.join(storage_path, 'blob', i+k+j), exist_ok=True)
+
     nodes = res.json()['nodes']
 
     # request get_folders

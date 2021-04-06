@@ -75,6 +75,7 @@ class ListFilesHandler(tornado.web.RequestHandler):
         folders = get_folders()
         folder_meta_hash = folders.get(folder_name, '')
 
+        folder_meta_data = {'items': {}}
         storages = get_storages()
         for storage_name, storage_payload in storages.items():
             storage_path = storage_payload[0]
