@@ -68,7 +68,7 @@ if __name__ == '__main__':
                     # chunks.append([chunk_hash, chunk_size, group0_device_no-len(group0_quota)])
                     file_chunks.append((chunk_hash, chunk_size))
                     # write file
-                    blob_path = os.path.join('blob', chunk_hash[:3], chunk_hash[3:])
+                    blob_path = os.path.join('blob', chunk_hash[:3], chunk_hash)
                     with open(blob_path, 'wb') as fw:
                         fw.write(data)
                     # if quota < chunk_size:

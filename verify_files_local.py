@@ -42,7 +42,7 @@ def main():
                 for chunk_hash, chunk_size, group in file_chunks:
                     if chunk_hash in verified_chunks:
                         continue
-                    with open("blob/%s/%s" % (chunk_hash[:3], chunk_hash[3:]), 'rb') as f:
+                    with open("blob/%s/%s" % (chunk_hash[:3], chunk_hash), 'rb') as f:
                         # group0 = []
                         # file_size = 0
                         data = f.read(chunk_size)

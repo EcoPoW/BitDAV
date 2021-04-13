@@ -51,7 +51,7 @@ def main():
                 # chunks.append([chunk_hash, chunk_size, group0_device_no-len(group0_quota)])
                 file_chunks.append((chunk_hash, chunk_size))
                 # write file
-                with open('blob/%s/%s' % (chunk_hash[:3], chunk_hash[3:]), 'wb') as fw:
+                with open('blob/%s/%s' % (chunk_hash[:3], chunk_hash), 'wb') as fw:
                     fw.write(data)
                 # if quota < chunk_size:
                 #     group0_current_device_index += 1
