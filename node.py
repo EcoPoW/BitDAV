@@ -68,8 +68,6 @@ def main():
                                             # (r'/\*join_approve', chain.JoinApproveHandler),
                                             # (r'/\*get_nodes', TestHandler),
 
-                                            (r'/\*list_folders', fs.ListFoldersHandler),
-                                            (r'/\*list_files', fs.ListFilesHandler),
                                             (r'/\*get_folders', fs.GetFoldersHandler),
                                             (r'/\*get_folder', fs.GetFolderHandler),
                                             (r'/\*add_folder', fs.AddFolderHandler),
@@ -84,6 +82,8 @@ def main():
                                             (r'/\*get_storage', fs.GetStorageHandler),
 
                                             (r'/\*test', chain.TestHandler),
+                                            (r'/', fs.ListFoldersHandler),
+                                            (r'/(.*)', fs.ListFilesHandler),
             # (r'.*', tornado.web.FallbackHandler, dict(fallback=tornado.wsgi.WSGIContainer(wsgi_app))),
         ], **settings)
 

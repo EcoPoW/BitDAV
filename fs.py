@@ -65,18 +65,28 @@ class TestHandler(tornado.web.RequestHandler):
 
 class ListFoldersHandler(tornado.web.RequestHandler):
     def get(self):
-        for folder_name in get_folders():
-            self.write('<a href="/*list_files?folder_name=%s">List</a> %s<br>\n' % (folder_name, folder_name))
-        self.finish('\n')
+        names = get_folders()
+        for folder_name, folder_meta_hash in names.items():
+            self.write('<a href="/%s">%s<br>' % (folder_name, folder_name))
+        self.finish()
+
 
 class ListFilesHandler(tornado.web.RequestHandler):
-    def get(self):
-        folder_name = self.get_argument('folder_name')
-        folders = get_folders()
-        folder_meta_hash = folders.get(folder_name, '')
-
-        folder_meta_data = {'items': {}}
+    def get(self, folder_name):
         storages = get_storages()
+        if not storages:
+            self.finish('no storage config')
+            return
+
+        # folder_name = self.get_argument('folder_name')
+        names = get_folders()
+        folder_meta_hash = names.get(folder_name, '')
+        # self.finish({'name': folder_name, 'meta_hash': folder_meta_hash})
+
+        # folder_meta_hash = self.get_argument('folder_meta_hash')
+        self.write('<a href="/*update_folder?folder_name=%s">Add</a>' % (folder_name))
+        self.write('<h1>%s</h1>' % (folder_name))
+
         for storage_name, storage_payload in storages.items():
             storage_path = storage_payload[0]
             node_name = storage_payload[1]
@@ -87,13 +97,10 @@ class ListFilesHandler(tornado.web.RequestHandler):
                         folder_meta_json = f.read()
                         folder_meta_data = tornado.escape.json_decode(folder_meta_json)
                         assert folder_meta_data['type'] == 'folder_meta'
+                        for item in folder_meta_data.get('items', []):
+                            self.write('<a href="">%s</a><br>' % item[0])
                         break
 
-        self.write('Node name %s storage path %s<br>\n' % (node_name, storage_path))
-        self.write('%s %s<br>\n' % (folder_name, folder_meta_hash))
-        for item_name, file_meta_data in folder_meta_data['items'].items():
-            self.write('%s %s <br>\n' % (item_name, str(file_meta_data)))
-        self.finish('\n')
 
 class GetFoldersHandler(tornado.web.RequestHandler):
     def get(self):
@@ -104,6 +111,7 @@ class GetFoldersHandler(tornado.web.RequestHandler):
             if folder_name and folder_meta_hash:
                 result["folders"][folder_name] = folder_meta_hash
         self.finish(result)
+
 
 class GetFolderHandler(tornado.web.RequestHandler):
     def get(self):
