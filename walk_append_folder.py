@@ -18,12 +18,20 @@ from chunk import chunks_to_partition
 
 items_rename_counter = {}
 
-STORAGE_PREFIX = ''
-STORAGE_PREFIX = '/media/ubuntu/WD/WD8T_west/'
 
 if __name__ == '__main__':
-    # print('storage_folder', sys.argv[3])
     folder_name = sys.argv[1]
+    print('folder_name', folder_name)
+
+    folder_path = sys.argv[2]
+    print('folder_path', folder_path)
+
+    try:
+        storage_path = sys.argv[3]
+    except:
+        storage_path = './'
+    print('storage_path', storage_path)
+
     # res = requests.get('http://127.0.0.1:8001/*get_folder?folder_name=%s' % urllib.parse.quote(folder_name))
     # print('get_folder', res.json())
     # folder_meta_hash = res.json()['meta_hash']
@@ -37,18 +45,14 @@ if __name__ == '__main__':
     # else:
     #     folder_meta_data = {'type':'folder_meta', 'name': folder_name, 'items':[]}
 
-    os.makedirs('%smeta/' % STORAGE_PREFIX, exist_ok=True)
-    # os.mkdir('%sblob/' % STORAGE_PREFIX)
+    os.makedirs('%smeta/' % storage_path, exist_ok=True)
+    # os.mkdir('%sblob/' % storage_path)
     for i in '0123456789abcdef':
         for j in '0123456789abcdef':
             for k in '0123456789abcdef':
-                os.makedirs('%sblob/%s%s%s' % (STORAGE_PREFIX, i, k, j), exist_ok=True)
+                os.makedirs('%sblob/%s%s%s' % (storage_path, i, k, j), exist_ok=True)
 
     folder_meta_data = {'type':'folder_meta', 'name': folder_name, 'items':{}}
-
-
-    folder_path = sys.argv[2]
-    print('folder_path', folder_path)
 
     for root, dirs, files in os.walk(folder_path):
         for fname in files:
@@ -75,7 +79,7 @@ if __name__ == '__main__':
                     # chunks.append([chunk_hash, chunk_size, group0_device_no-len(group0_quota)])
                     file_chunks.append((chunk_hash, chunk_size))
                     # write file
-                    blob_path = os.path.join(STORAGE_PREFIX, 'blob', chunk_hash[:3], chunk_hash)
+                    blob_path = os.path.join(storage_path, 'blob', chunk_hash[:3], chunk_hash)
                     with open(blob_path, 'wb') as fw:
                         fw.write(data)
                     # if quota < chunk_size:
@@ -117,7 +121,7 @@ if __name__ == '__main__':
 
     folder_meta_json = json.dumps(folder_meta_data).encode()
     folder_meta_hash = hashlib.sha256(folder_meta_json).hexdigest()
-    with open('%smeta/%s' % (STORAGE_PREFIX, folder_meta_hash), 'wb') as f:
+    with open('%smeta/%s' % (storage_path, folder_meta_hash), 'wb') as f:
         f.write(folder_meta_json)
     print('folder_meta_hash', folder_meta_hash, len(folder_meta_json))
 
