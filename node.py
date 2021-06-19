@@ -82,7 +82,9 @@ def main():
                                             (r'/\*get_storage', fs.GetStorageHandler),
 
                                             (r'/\*test', chain.TestHandler),
+
                                             (r'/', fs.ListFoldersHandler),
+                                            (r'/(.*)/(.*)', fs.GetFileHandler),
                                             (r'/(.*)', fs.ListFilesHandler),
             # (r'.*', tornado.web.FallbackHandler, dict(fallback=tornado.wsgi.WSGIContainer(wsgi_app))),
         ], **settings)

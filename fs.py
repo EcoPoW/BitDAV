@@ -98,8 +98,13 @@ class ListFilesHandler(tornado.web.RequestHandler):
                         folder_meta_data = tornado.escape.json_decode(folder_meta_json)
                         assert folder_meta_data['type'] == 'folder_meta'
                         for item in folder_meta_data.get('items', []):
-                            self.write('<a href="">%s</a><br>' % item[0])
+                            self.write('<a href="/%s/%s">%s</a><br>' % (folder_name, item[0], item[0]))
                         break
+
+
+class GetFileHandler(tornado.web.RequestHandler):
+    def get(self, folder_name, file_name):
+        self.finish('%s %s' % (folder_name, file_name))
 
 
 class GetFoldersHandler(tornado.web.RequestHandler):

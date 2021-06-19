@@ -14,13 +14,15 @@ from chunk import group0_quota
 
 from chunk import mt_combine
 from chunk import chunks_to_partition
-# init_folder_local_by_scandir.py folder_name folder1 folder2 ...
+# walk_append_folder.py folder_name folder_path [storage_path]
 
 items_rename_counter = {}
 
+STORAGE_PREFIX = ''
+STORAGE_PREFIX = '/media/ubuntu/WD/WD8T_west/'
 
 if __name__ == '__main__':
-    print('folders', sys.argv[2:])
+    # print('storage_folder', sys.argv[3])
     folder_name = sys.argv[1]
     # res = requests.get('http://127.0.0.1:8001/*get_folder?folder_name=%s' % urllib.parse.quote(folder_name))
     # print('get_folder', res.json())
@@ -35,24 +37,29 @@ if __name__ == '__main__':
     # else:
     #     folder_meta_data = {'type':'folder_meta', 'name': folder_name, 'items':[]}
 
-    os.makedirs('meta/', exist_ok=True)
-    # os.mkdir('blob/')
+    os.makedirs('%smeta/' % STORAGE_PREFIX, exist_ok=True)
+    # os.mkdir('%sblob/' % STORAGE_PREFIX)
     for i in '0123456789abcdef':
         for j in '0123456789abcdef':
             for k in '0123456789abcdef':
-                os.makedirs('blob/'+i+k+j, exist_ok=True)
+                os.makedirs('%sblob/%s%s%s' % (STORAGE_PREFIX, i, k, j), exist_ok=True)
 
     folder_meta_data = {'type':'folder_meta', 'name': folder_name, 'items':{}}
 
 
-    for folder_name in sys.argv[2:]:
-        files = os.scandir(folder_name)
+    folder_path = sys.argv[2]
+    print('folder_path', folder_path)
 
-        for f in files:
-            file_name = folder_name + f.name
+    for root, dirs, files in os.walk(folder_path):
+        for fname in files:
+            print(root, fname)
+            file_name = os.path.join(root, fname)
             file_chunks = []
-            if f.is_dir():
-                continue
+            # if f.is_dir():
+            #     continue
+            # print(fname)
+            # continue
+
             with open(file_name, 'rb') as f:
                 # group0 = []
                 file_size = 0
@@ -68,7 +75,7 @@ if __name__ == '__main__':
                     # chunks.append([chunk_hash, chunk_size, group0_device_no-len(group0_quota)])
                     file_chunks.append((chunk_hash, chunk_size))
                     # write file
-                    blob_path = os.path.join('blob', chunk_hash[:3], chunk_hash)
+                    blob_path = os.path.join(STORAGE_PREFIX, 'blob', chunk_hash[:3], chunk_hash)
                     with open(blob_path, 'wb') as fw:
                         fw.write(data)
                     # if quota < chunk_size:
@@ -94,7 +101,7 @@ if __name__ == '__main__':
 
             while True:
                 name, ext = os.path.splitext(f.name)
-                unique_name = "%s%s%s" % (os.path.basename(name), items_rename_counter.get(name, ''), ext)
+                unique_name = "%s/%s%s%s" % (os.path.relpath(root, folder_path), os.path.basename(name), items_rename_counter.get(name, ''), ext)
                 if unique_name not in folder_meta_data['items']:
                     break
                 items_rename_counter.setdefault(name, 1)
@@ -108,11 +115,11 @@ if __name__ == '__main__':
             # file_meta_hash = hashlib.sha256(file_meta_json).hexdigest()
             # print(file_meta_hash, len(file_meta_json))
 
-        folder_meta_json = json.dumps(folder_meta_data).encode()
-        folder_meta_hash = hashlib.sha256(folder_meta_json).hexdigest()
-        with open('meta/%s' % folder_meta_hash, 'wb') as f:
-            f.write(folder_meta_json)
-        print('folder_meta_hash', folder_meta_hash, len(folder_meta_json))
+    folder_meta_json = json.dumps(folder_meta_data).encode()
+    folder_meta_hash = hashlib.sha256(folder_meta_json).hexdigest()
+    with open('%smeta/%s' % (STORAGE_PREFIX, folder_meta_hash), 'wb') as f:
+        f.write(folder_meta_json)
+    print('folder_meta_hash', folder_meta_hash, len(folder_meta_json))
 
-        # res = requests.post('http://127.0.0.1:8001/*update_folder', {'folder_name': folder_name, 'folder_meta_hash': folder_meta_hash})
-        # print('update_folder', res.text)
+    # res = requests.post('http://127.0.0.1:8001/*update_folder', {'folder_name': folder_name, 'folder_meta_hash': folder_meta_hash})
+    # print('update_folder', res.text)
