@@ -97,14 +97,61 @@ class ListFilesHandler(tornado.web.RequestHandler):
                         folder_meta_json = f.read()
                         folder_meta_data = tornado.escape.json_decode(folder_meta_json)
                         assert folder_meta_data['type'] == 'folder_meta'
-                        for item in folder_meta_data.get('items', []):
-                            self.write('<a href="/%s/%s">%s</a><br>' % (folder_name, item[0], item[0]))
+                        for file_name in folder_meta_data.get('items', {}):
+                            self.write('<a href="/%s/%s">%s</a><br>' % (folder_name, file_name, file_name))
                         break
 
 
 class GetFileHandler(tornado.web.RequestHandler):
+    @tornado.gen.coroutine
     def get(self, folder_name, file_name):
-        self.finish('%s %s' % (folder_name, file_name))
+        # self.finish("%s %s" %(folder_name, file_name))
+        folders = get_folders()
+        folder_meta_hash = folders.get(folder_name, '')
+        storages = get_storages()
+
+        # find a local storage (set)
+        for storage_name, storage_payload  in storages.items():
+            storage_path = storage_payload[0]
+            node_name = storage_payload[1]
+            if node_name == chain.current_name:
+                # self.write(storage_name)
+                # self.write(tornado.escape.json_encode(storage_payload))
+
+                # look up folder_meta_hash content
+                folder_meta_path = os.path.join(storage_path, 'meta', folder_meta_hash)
+                if os.path.exists(folder_meta_path):
+                    with open(folder_meta_path, 'rb') as f:
+                        folder_meta_json = f.read()
+                        folder_meta_data = tornado.escape.json_decode(folder_meta_json)
+                        assert folder_meta_data['type'] == 'folder_meta'
+                        self.write('%s %s<br> %s<br>' % (folder_name, file_name, folder_meta_data.get('items', {})))
+                        if file_name in folder_meta_data.get('items', {}):
+                            item = folder_meta_data.get('items', {})[file_name]
+                            chunks = item[3]
+                            # break
+                # else:
+                #     self.finish('not found')
+                #     return
+
+                self.set_header('Content-Type', 'application/octet-stream')
+                for chunk in chunks:
+                    file_blob_hash = chunk[0]
+                    file_blob_path = os.path.join(storage_path, 'blob', file_blob_hash)
+                    with open(file_blob_path, 'rb') as f:
+                        self.write(f.read())
+                break
+
+        # check file_name and get storage
+        # get storage IP and port if not local
+        # fetch and respone if not 404
+        http_client = tornado.httpclient.AsyncHTTPClient()
+
+        # names, pirmary = chain.get_names()
+        # for name, info in names.items():
+        #     host, port, pk = info
+        #     self.finish('%s %s' % (folder_name, file_name))
+
 
 
 class GetFoldersHandler(tornado.web.RequestHandler):
@@ -224,23 +271,31 @@ class GetMetaHandler(tornado.web.RequestHandler):
 
 class UpdateMetaHandler(tornado.web.RequestHandler):
     def post(self):
-        pass
-
+        storages = get_storages()
+        if not storages:
+            self.finish('no storage config')
+            return
 
 class GetBlobHandler(tornado.web.RequestHandler):
     def get(self):
-        pass
+        storages = get_storages()
+        if not storages:
+            self.finish('no storage config')
+            return
 
 
 class UpdateBlobHandler(tornado.web.RequestHandler):
     def post(self):
-        pass
+        storages = get_storages()
+        if not storages:
+            self.finish('no storage config')
+            return
 
 
 class UpdateStorageHandler(tornado.web.RequestHandler):
     def get(self):
         storages = get_storages()
-        self.finish('''%s<br><form method="POST">
+        self.write('''%s<br><form method="POST">
             <input name="storage_name" placeholder="Storage Name" />
             <input name="storage_path" placeholder="Storage Path" />
             <input type="submit" value="Update" /></form>''' % storages)
@@ -248,9 +303,10 @@ class UpdateStorageHandler(tornado.web.RequestHandler):
     def post(self):
         storage_name = self.get_argument('storage_name')
         storage_path = self.get_argument('storage_path')
+        node_name = self.get_argument('node_name', chain.current_name)
         print('storage_path', storage_path)
 
-        block_data = {'type': 'storage', 'name': storage_name, 'path': storage_path, 'node_name': chain.current_name, 'timestamp': time.time()}
+        block_data = {'type': 'storage', 'name': storage_name, 'path': storage_path, 'node_name': node_name, 'timestamp': time.time()}
         block = chain.update_chain(block_data)
         chain.broadcast_block(list(block))
 
