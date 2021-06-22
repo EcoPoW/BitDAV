@@ -137,7 +137,7 @@ class GetFileHandler(tornado.web.RequestHandler):
                 self.set_header('Content-Type', 'application/octet-stream')
                 for chunk in chunks:
                     file_blob_hash = chunk[0]
-                    file_blob_path = os.path.join(storage_path, 'blob', file_blob_hash)
+                    file_blob_path = os.path.join(storage_path, 'blob', file_blob_hash[:3], file_blob_hash)
                     with open(file_blob_path, 'rb') as f:
                         self.write(f.read())
                 break
@@ -298,15 +298,17 @@ class UpdateStorageHandler(tornado.web.RequestHandler):
         self.write('''%s<br><form method="POST">
             <input name="storage_name" placeholder="Storage Name" />
             <input name="storage_path" placeholder="Storage Path" />
+            <input name="group" placeholder="Group 0 or 1" />
             <input type="submit" value="Update" /></form>''' % storages)
 
     def post(self):
         storage_name = self.get_argument('storage_name')
         storage_path = self.get_argument('storage_path')
         node_name = self.get_argument('node_name', chain.current_name)
-        print('storage_path', storage_path)
+        group = self.get_argument('group')
+        # print('storage_path', storage_path)
 
-        block_data = {'type': 'storage', 'name': storage_name, 'path': storage_path, 'node_name': node_name, 'timestamp': time.time()}
+        block_data = {'type': 'storage', 'name': storage_name, 'path': storage_path, 'node_name': node_name, 'group': group, 'timestamp': time.time()}
         block = chain.update_chain(block_data)
         chain.broadcast_block(list(block))
 
@@ -314,18 +316,22 @@ class UpdateStorageHandler(tornado.web.RequestHandler):
 
 class GetStorageHandler(tornado.web.RequestHandler):
     def get(self):
-        result = {'storages':{}, 'node_name': chain.current_name, 'nodes':[]}
+        result = {'storages':{}, 'node_name': chain.current_name, 'nodes':{}}
         storages = get_storages()
         for storage_name, storage_payload in storages.items():
             storage_path = storage_payload[0]
             node_name = storage_payload[1]
+            try:
+                group = storage_payload[2]
+            except:
+                group = '0'
             if node_name == chain.current_name:
-                result['storages'][storage_name] = storage_path
+                result['storages'][storage_name] = [storage_path, node_name, group]
 
         names, pirmary = chain.get_names()
         for name, info in names.items():
             host, port, pk = info
-            if name != chain.current_name:
-                result['nodes'].append([host, port])
+            # if name != chain.current_name:
+            result['nodes'][name] = [host, port]
 
         self.finish(result)

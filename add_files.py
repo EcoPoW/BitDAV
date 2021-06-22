@@ -14,13 +14,19 @@ from chunk import group0_quota
 
 from chunk import mt_combine
 from chunk import chunks_to_partition
-# add_files.py IP:PORT folder_name file_name ...
+# add_files.py IP:PORT folder_name dir_name file_name ...
 
 
 def main():
-    print('files', sys.argv[3:])
-    folder_name = sys.argv[2]
-    ip_and_port = sys.argv[1]
+    ip_and_port = sys.argv[1] # IP:PORT
+    folder_name = sys.argv[2] # music
+    folder_name = folder_name.strip('/')
+    dir_name = sys.argv[3] # classic/ or / by default
+    dir_name = dir_name.strip('/')
+    if dir_name:
+        dir_name = '%s/' % dir_name
+    print('files', sys.argv[4:])
+
     res = requests.get('http://%s/*get_folder?folder_name=%s' % (ip_and_port, urllib.parse.quote(folder_name)))
     print('get_folder', res.json())
     folder_meta_hash = res.json()['meta_hash']
@@ -35,7 +41,7 @@ def main():
         folder_meta_data = {'type':'folder_meta', 'name': folder_name, 'items':{}}
 
     items_rename_counter = {}
-    for file_name in sys.argv[2:]:
+    for file_name in sys.argv[4:]:
         file_chunks = []
         with open(file_name, 'rb') as f:
             # group0 = []
@@ -59,11 +65,11 @@ def main():
                 # quota -= chunk_size
                 # print('quota', group0_current_device_index, quota)
 
-        chunks_to_go, group0_quota_left = chunks_to_partition(file_chunks, group0_quota)
-        pprint.pprint(chunks_to_go)
+        # chunks_to_go, group0_quota_left = chunks_to_partition(file_chunks, group0_quota)
+        # pprint.pprint(chunks_to_go)
         chunks = []
         for chunk_hash, chunk_size in file_chunks:
-            chunks.append([chunk_hash, chunk_size, chunks_to_go[(chunk_hash, chunk_size)]])
+            chunks.append([chunk_hash, chunk_size, []]) # chunks_to_go[(chunk_hash, chunk_size)]
 
         print('chunks', chunks, len(chunks))
         hash_list = mt_combine([c[0:1] for c in chunks], hashlib.sha256)
@@ -75,7 +81,7 @@ def main():
 
         while True:
             name, ext = os.path.splitext(file_name)
-            unique_name = "%s%s%s" % (os.path.basename(name), items_rename_counter.get(name, ''), ext)
+            unique_name = "%s%s%s%s" % (dir_name, os.path.basename(name), items_rename_counter.get(name, ''), ext)
             if unique_name not in folder_meta_data['items']:
                 break
             items_rename_counter.setdefault(name, 1)
