@@ -39,9 +39,9 @@ if __name__ == '__main__':
     print('get_storage', res.json())
     node_name = res.json()['node_name']
     for storage_name, storage_payload in res.json()['storages'].items():
-        storage_path = storage_payload[0]
         storage_node_name = storage_payload[1]
-        if storage_node_name == storage_name:
+        if storage_node_name == node_name:
+            storage_path = storage_payload[0]
             break
 
     # folder_meta_hash = res.json()['meta_hash']

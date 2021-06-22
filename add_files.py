@@ -13,7 +13,7 @@ from chunk import MAX_CHUNK_SIZE
 from chunk import group0_quota
 
 from chunk import mt_combine
-from chunk import chunks_to_partition
+# from chunk import chunks_to_partition
 # add_files.py IP:PORT folder_name dir_name file_name ...
 
 
@@ -27,12 +27,21 @@ def main():
         dir_name = '%s/' % dir_name
     print('files', sys.argv[4:])
 
+    res = requests.get('http://%s/*get_storage' % ip_and_port)
+    print('get_storage', res.json())
+    node_name = res.json()['node_name']
+    for storage_name, storage_payload in res.json()['storages'].items():
+        storage_node_name = storage_payload[1]
+        if storage_node_name == node_name:
+            storage_path = storage_payload[0]
+            break
+
     res = requests.get('http://%s/*get_folder?folder_name=%s' % (ip_and_port, urllib.parse.quote(folder_name)))
     print('get_folder', res.json())
     folder_meta_hash = res.json()['meta_hash']
 
     if folder_meta_hash:
-        with open('meta/%s' % folder_meta_hash, 'rb') as f:
+        with open(os.path.join(storage_path, 'meta', folder_meta_hash), 'rb') as f:
             folder_meta_json = f.read()
             folder_meta_data = json.loads(folder_meta_json)
             assert folder_meta_data['type'] == 'folder_meta'
@@ -97,7 +106,7 @@ def main():
 
     folder_meta_json = json.dumps(folder_meta_data).encode()
     folder_meta_hash = hashlib.sha256(folder_meta_json).hexdigest()
-    with open('meta/%s' % folder_meta_hash, 'wb') as f:
+    with open(os.path.join(storage_path, 'meta', folder_meta_hash), 'wb') as f:
         f.write(folder_meta_json)
     print('folder_meta_hash', folder_meta_hash, len(folder_meta_json))
 

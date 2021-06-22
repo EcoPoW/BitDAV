@@ -10,7 +10,7 @@ import tornado.web
 import tornado.httpclient
 import tornado.escape
 
-import ecdsa
+# import ecdsa
 
 import database
 import chain
@@ -145,7 +145,7 @@ class GetFileHandler(tornado.web.RequestHandler):
         # check file_name and get storage
         # get storage IP and port if not local
         # fetch and respone if not 404
-        http_client = tornado.httpclient.AsyncHTTPClient()
+        # http_client = tornado.httpclient.AsyncHTTPClient()
 
         # names, pirmary = chain.get_names()
         # for name, info in names.items():
