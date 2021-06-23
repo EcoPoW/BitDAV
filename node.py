@@ -83,6 +83,7 @@ def main():
 
                                             (r'/\*test', chain.TestHandler),
 
+                                            (r'/\*upload_file', fs.UploadFileHandler),
                                             (r'/', fs.ListFoldersHandler),
                                             (r'/(.*?)/(.*)', fs.GetFileHandler),
                                             (r'/(.*)', fs.ListFilesHandler),

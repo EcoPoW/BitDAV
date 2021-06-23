@@ -5,6 +5,7 @@ import uuid
 import time
 import hashlib
 import copy
+import shutil
 
 import tornado.web
 import tornado.httpclient
@@ -14,6 +15,8 @@ import tornado.escape
 
 import database
 import chain
+
+from chunk import MAX_CHUNK_SIZE
 
 folder_names = {}
 def get_folders(reload=False):
@@ -125,7 +128,7 @@ class GetFileHandler(tornado.web.RequestHandler):
                         folder_meta_json = f.read()
                         folder_meta_data = tornado.escape.json_decode(folder_meta_json)
                         assert folder_meta_data['type'] == 'folder_meta'
-                        self.write('%s %s<br> %s<br>' % (folder_name, file_name, folder_meta_data.get('items', {})))
+                        # self.write('%s %s<br> %s<br>' % (folder_name, file_name, folder_meta_data.get('items', {})))
                         if file_name in folder_meta_data.get('items', {}):
                             item = folder_meta_data.get('items', {})[file_name]
                             chunks = item[3]
@@ -153,6 +156,60 @@ class GetFileHandler(tornado.web.RequestHandler):
         #     self.finish('%s %s' % (folder_name, file_name))
 
 
+# @tornado.web.stream_request_body
+class UploadFileHandler(tornado.web.RequestHandler):
+    def get(self):
+        self.write('''<br><form method="POST" enctype="multipart/form-data">
+            <input name="folder_name" placeholder="Folder" />
+            <input name="dir_name" placeholder="Dir" />
+            <input name="file" type="file" />
+            <input type="submit" value="Upload"/></form>''')
+
+    def post(self):
+        storages = get_storages()
+        if not storages:
+            self.finish('no storage config')
+            return
+        
+        for storage_name, storage_payload in storages.items():
+            node_name = storage_payload[1]
+            if node_name == chain.current_name:
+                storage_path = storage_payload[0]
+                if shutil.disk_usage(storage_path).free > 2**20*128:
+                    break
+
+        for name, files in self.request.files.items():
+            print('===')
+            for file in files:
+                filename = file["filename"]
+                content_type = file["content_type"]
+                body = file["body"]
+                print(filename, content_type, len(body), type(body))
+
+                i = 0
+                j = 0
+                for j in range(MAX_CHUNK_SIZE, len(body), MAX_CHUNK_SIZE):
+                    print(i, j)
+                    print(hashlib.sha256(body[i:j]).hexdigest())
+                    i = j
+                else:
+                    print(j, len(body))
+                    print(hashlib.sha256(body[j:len(body)]).hexdigest())
+
+
+    # def initialize(self):
+    #     self.bytes_read = 0
+
+    # def data_received(self, chunk):
+    #     self.bytes_read += len(chunk)
+    #     print('POST', self.bytes_read)
+    #     print('POST', chunk)
+
+    # def post(self):
+    #     print('===')
+    #     mtype = self.request.headers.get("Content-Type")
+    #     print('POST', mtype, self.bytes_read)
+    #     self.write("OK")
 
 class GetFoldersHandler(tornado.web.RequestHandler):
     def get(self):
@@ -326,7 +383,8 @@ class GetStorageHandler(tornado.web.RequestHandler):
             except:
                 group = '0'
             if node_name == chain.current_name:
-                result['storages'][storage_name] = [storage_path, node_name, group]
+                disk = shutil.disk_usage(storage_path)
+                result['storages'][storage_name] = [storage_path, node_name, group, disk.free]
 
         names, pirmary = chain.get_names()
         for name, info in names.items():

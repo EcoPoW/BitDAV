@@ -13,6 +13,7 @@ import tornado.escape
 import ecdsa
 
 import database
+import setting
 
 def longest_chain(from_hash = '0'*64):
     conn = database.get_conn()
@@ -134,7 +135,8 @@ def ping():
     all_names = sorted(list(names.keys()))
     failed_names = set()
 
-    print('ping recent_block', recent_election_block)
+    if setting.DEBUG_CHAIN:
+        print('ping recent_block', recent_election_block)
     if current_name == pirmary and recent_election_block:
         print('ping broadcast', current_name, pirmary)
         # recent_block = get_chain()[-1]
@@ -147,7 +149,8 @@ def ping():
             pass
         try:
             response = yield http_client.fetch("http://%s:%s/*ping" % (host, port), request_timeout=1)
-            print('ping', time.time(), host, port, response.request_time)
+            if setting.DEBUG_CHAIN:
+                print('ping', time.time(), host, port, response.request_time)
             if name in failed_names:
                 failed_names.remove(name)
         except:
@@ -187,7 +190,8 @@ def get_names(reload=False):
             block_data = tornado.escape.json_decode(block_data_json)
             # print(names)
             if block_data.get('type') == 'name':
-                print('get_names block', block_data)
+                if setting.DEBUG_CHAIN:
+                    print('get_names block', block_data)
                 if 'name' in block_data:
                     name = block_data['name']
                     host = block_data['host']
@@ -198,7 +202,8 @@ def get_names(reload=False):
                 if 'pirmary' in block_data:
                     pirmary = block_data['pirmary']
                     recent_election_block = block
-    print('get_names', chain_names, pirmary)
+    if setting.DEBUG_CHAIN:
+        print('get_names', chain_names, pirmary)
     return chain_names, pirmary
 
 
@@ -216,7 +221,8 @@ def fetch_chain(host, port, block_hash):
 
         c.execute("SELECT * FROM chain WHERE hash = ?", (block_hash,))
         blocks = c.fetchall()
-        print('fetch_chain', block_hash, blocks)
+        if setting.DEBUG_CHAIN:
+            print('fetch_chain', block_hash, blocks)
         # if c.rowcount == 0:
         if not blocks:
             c.execute("INSERT INTO chain(hash, prev_hash, height, timestamp, data) VALUES (?, ?, ?, ?, ?)", tuple(block))
@@ -388,10 +394,12 @@ class GossipHandler(tornado.web.RequestHandler):
         # get host and port from the new pirmary
         block_data_json = block[4]
         block_data = tornado.escape.json_decode(block_data_json)
-        print('GossipHandler', block_hash, block_data)
+        if setting.DEBUG_CHAIN:
+            print('GossipHandler', block_hash, block_data)
         if 'pirmary' in block_data:
             names, pirmary = get_names()
-            print('GossipHandler', block_hash, names[block_data['pirmary']])
+            if setting.DEBUG_CHAIN:
+                print('GossipHandler', block_hash, names[block_data['pirmary']])
             host, port, pk = names[block_data['pirmary']]
             is_fetch_required = True
 

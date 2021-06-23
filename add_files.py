@@ -1,9 +1,9 @@
 
 import sys
 import os
-import hashlib
 import json
 import time
+import hashlib
 import pprint
 import urllib.parse
 
@@ -67,6 +67,9 @@ def main():
                 # chunks.append([chunk_hash, chunk_size, group0_device_no-len(group0_quota)])
                 file_chunks.append((chunk_hash, chunk_size))
                 # write file
+                blob_path = os.path.join(storage_path, 'blob', chunk_hash[:3], chunk_hash)
+                with open(blob_path, 'wb') as fw:
+                    fw.write(data)
                 # if quota < chunk_size:
                 #     group0_current_device_index += 1
                 #     quota = group0_quota[group0_current_device_index]
