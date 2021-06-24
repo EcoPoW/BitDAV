@@ -10,7 +10,7 @@ import urllib.parse
 import requests
 
 from chunk import MAX_CHUNK_SIZE
-from chunk import group0_quota
+# from chunk import group0_quota
 
 from chunk import mt_combine
 # from chunk import chunks_to_partition

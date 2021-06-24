@@ -78,8 +78,8 @@ class ListFilesHandler(tornado.web.RequestHandler):
     def get(self, folder_name):
         storages = get_storages()
         if not storages:
-            self.finish('no storage config')
-            return
+            self.write('no storage config')
+            raise tornado.web.HTTPError(500)
 
         # folder_name = self.get_argument('folder_name')
         names = get_folders()
@@ -95,7 +95,7 @@ class ListFilesHandler(tornado.web.RequestHandler):
             node_name = storage_payload[1]
             if node_name == chain.current_name:
                 folder_meta_path = os.path.join(storage_path, 'meta', folder_meta_hash)
-                if os.path.exists(folder_meta_path):
+                if folder_meta_path and os.path.exists(folder_meta_path):
                     with open(folder_meta_path, 'rb') as f:
                         folder_meta_json = f.read()
                         folder_meta_data = tornado.escape.json_decode(folder_meta_json)
@@ -168,9 +168,9 @@ class UploadFileHandler(tornado.web.RequestHandler):
     def post(self):
         storages = get_storages()
         if not storages:
-            self.finish('no storage config')
-            return
-        
+            self.write('no storage config')
+            raise tornado.web.HTTPError(500)
+    
         for storage_name, storage_payload in storages.items():
             node_name = storage_payload[1]
             if node_name == chain.current_name:
@@ -283,14 +283,14 @@ class UpdateFolderHandler(tornado.web.RequestHandler):
 
         storages = get_storages()
         if not storages:
-            self.finish('no storage config')
-            return
+            self.write('no storage config')
+            raise tornado.web.HTTPError(500)
 
         for storage_payload in storages.values():
             storage_path = storage_payload[0]
             node_name = storage_payload[1]
             folder_meta_path = os.path.join(storage_path, 'meta', folder_meta_hash)
-            if os.path.exists(folder_meta_path):
+            if folder_meta_hash and os.path.exists(folder_meta_path):
                 with open(folder_meta_path, 'rb') as f:
                     folder_meta_json = f.read()
                     folder_meta_data = tornado.escape.json_decode(folder_meta_json)
@@ -311,8 +311,8 @@ class GetMetaHandler(tornado.web.RequestHandler):
     def get(self):
         storages = get_storages()
         if not storages:
-            self.finish('no storage config')
-            return
+            self.write('no storage config')
+            raise tornado.web.HTTPError(500)
 
         folder_meta_hash = self.get_argument('folder_meta_hash')
         for storage_path, _ in storages.values():
@@ -324,29 +324,32 @@ class GetMetaHandler(tornado.web.RequestHandler):
                     assert folder_meta_data['type'] == 'folder_meta'
                     self.finish(folder_meta_json)
                 break
+        else:
+            raise tornado.web.HTTPError(404)
 
 
 class UpdateMetaHandler(tornado.web.RequestHandler):
     def post(self):
         storages = get_storages()
         if not storages:
-            self.finish('no storage config')
-            return
+            self.write('no storage config')
+            raise tornado.web.HTTPError(500)
+
 
 class GetBlobHandler(tornado.web.RequestHandler):
     def get(self):
         storages = get_storages()
         if not storages:
-            self.finish('no storage config')
-            return
+            self.write('no storage config')
+            raise tornado.web.HTTPError(500)
 
 
 class UpdateBlobHandler(tornado.web.RequestHandler):
     def post(self):
         storages = get_storages()
         if not storages:
-            self.finish('no storage config')
-            return
+            self.write('no storage config')
+            raise tornado.web.HTTPError(500)
 
 
 class UpdateStorageHandler(tornado.web.RequestHandler):

@@ -505,7 +505,8 @@ class GetBlockHandler(tornado.web.RequestHandler):
         c = conn.cursor()
         c.execute("SELECT * FROM chain WHERE hash = ?", (block_hash, ))
         block = c.fetchone()
-        print('GetBlockHandler', block)
+        if setting.DEBUG_CHAIN:
+            print('GetBlockHandler', block)
 
         self.finish({'block': list(block[1:])})
 
