@@ -59,7 +59,7 @@ def main():
                     print(folder_meta_hash)
                     if not os.path.exists(os.path.join(storage_path, 'meta', folder_meta_hash)):
                         res = requests.get("http://%s:%s/*get_meta?folder_meta_hash=%s" % (host, port, folder_meta_hash))
-                        if res.status_code == 404:
+                        if res.status_code != 200:
                             continue
 
                         assert folder_meta_hash == hashlib.sha256(res.text.encode('utf8')).hexdigest()

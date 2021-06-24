@@ -17,6 +17,7 @@ import database
 import chain
 
 from chunk import MAX_CHUNK_SIZE
+from chunk import mt_combine
 
 folder_names = {}
 def get_folders(reload=False):
@@ -95,7 +96,7 @@ class ListFilesHandler(tornado.web.RequestHandler):
             node_name = storage_payload[1]
             if node_name == chain.current_name:
                 folder_meta_path = os.path.join(storage_path, 'meta', folder_meta_hash)
-                if folder_meta_path and os.path.exists(folder_meta_path):
+                if folder_meta_hash and os.path.exists(folder_meta_path):
                     with open(folder_meta_path, 'rb') as f:
                         folder_meta_json = f.read()
                         folder_meta_data = tornado.escape.json_decode(folder_meta_json)
@@ -178,6 +179,19 @@ class UploadFileHandler(tornado.web.RequestHandler):
                 if shutil.disk_usage(storage_path).free > 2**20*128:
                     break
 
+        folder_name = self.get_argument('folder_name')
+        folders = get_folders()
+        folder_meta_hash = folders.get(folder_name, '')
+
+        if folder_meta_hash:
+            with open(os.path.join(storage_path, 'meta', folder_meta_hash), 'rb') as f:
+                folder_meta_json = f.read()
+                folder_meta_data = tornado.escape.json_decode(folder_meta_json)
+                assert folder_meta_data['type'] == 'folder_meta'
+
+        else:
+            folder_meta_data = {'type':'folder_meta', 'name': folder_name, 'items':{}}
+
         for name, files in self.request.files.items():
             print('===')
             for file in files:
@@ -185,17 +199,64 @@ class UploadFileHandler(tornado.web.RequestHandler):
                 content_type = file["content_type"]
                 body = file["body"]
                 print(filename, content_type, len(body), type(body))
+                file_chunks = []
 
                 i = 0
                 j = 0
                 for j in range(MAX_CHUNK_SIZE, len(body), MAX_CHUNK_SIZE):
-                    print(i, j)
-                    print(hashlib.sha256(body[i:j]).hexdigest())
+                    chunk_hash = hashlib.sha256(body[i:j]).hexdigest()
+                    file_blob_path = os.path.join(storage_path, 'blob', chunk_hash[:3], chunk_hash)
+                    with open(file_blob_path, 'wb') as f:
+                        f.write(body[i:j])
+                    chunk_size = j - i
+                    print(chunk_hash, chunk_size, i, j)
+                    file_chunks.append((chunk_hash, chunk_size))
                     i = j
+
                 else:
                     print(j, len(body))
-                    print(hashlib.sha256(body[j:len(body)]).hexdigest())
+                    chunk_hash = hashlib.sha256(body[j:len(body)]).hexdigest()
+                    file_blob_path = os.path.join(storage_path, 'blob', chunk_hash[:3], chunk_hash)
+                    with open(file_blob_path, 'wb') as f:
+                        f.write(body[j:len(body)])
+                    chunk_size = len(body) - j
+                    print(chunk_hash, chunk_size, i, j)
+                    file_chunks.append((chunk_hash, chunk_size))
 
+
+                chunks = []
+                for chunk_hash, chunk_size in file_chunks:
+                    chunks.append([chunk_hash, chunk_size, []]) # chunks_to_go[(chunk_hash, chunk_size)]
+
+                print('chunks', chunks, len(chunks))
+                hash_list = mt_combine([c[0:1] for c in chunks], hashlib.sha256)
+                while len(hash_list) > 1:
+                    # pprint.pprint(hash_list)
+                    print('---')
+                    hash_list = mt_combine(hash_list, hashlib.sha256)
+                merkle_root = hash_list[0][-1]
+
+                # while True:
+                #     name, ext = os.path.splitext(file_name)
+                #     unique_name = "%s%s%s%s" % (dir_name, os.path.basename(name), items_rename_counter.get(name, ''), ext)
+                #     if unique_name not in folder_meta_data['items']:
+                #         break
+                #     items_rename_counter.setdefault(name, 1)
+                #     items_rename_counter[name] += 1
+
+                file_meta_data = [merkle_root, len(body), time.time(), chunks]
+                # assert unique_name not in folder_meta_data['items']
+                folder_meta_data['items'][filename] = file_meta_data
+
+        folder_meta_json = tornado.escape.json_encode(folder_meta_data)
+        folder_meta_hash = hashlib.sha256(folder_meta_json.encode('utf8')).hexdigest()
+        with open(os.path.join(storage_path, 'meta', folder_meta_hash), 'wb') as f:
+            f.write(folder_meta_json.encode('utf8'))
+        print('folder_meta_hash', folder_meta_hash, len(folder_meta_json))
+
+        block_data = {'type': 'folder', 'name': folder_name, 'meta_hash': folder_meta_hash, 'timestamp': time.time()}
+        block = chain.update_chain(block_data)
+        chain.broadcast_block(list(block))
 
     # def initialize(self):
     #     self.bytes_read = 0
