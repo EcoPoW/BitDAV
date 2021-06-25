@@ -88,7 +88,7 @@ class ListFilesHandler(tornado.web.RequestHandler):
         # self.finish({'name': folder_name, 'meta_hash': folder_meta_hash})
 
         # folder_meta_hash = self.get_argument('folder_meta_hash')
-        self.write('<a href="/*update_folder?folder_name=%s">Add</a>' % (folder_name))
+        self.write('<a href="/*upload_file?folder_name=%s">Add</a>' % (folder_name))
         self.write('<h1>%s</h1>' % (folder_name))
 
         for storage_name, storage_payload in storages.items():
@@ -160,11 +160,12 @@ class GetFileHandler(tornado.web.RequestHandler):
 # @tornado.web.stream_request_body
 class UploadFileHandler(tornado.web.RequestHandler):
     def get(self):
+        folder_name = self.get_argument('folder_name', '')
         self.write('''<br><form method="POST" enctype="multipart/form-data">
-            <input name="folder_name" placeholder="Folder" />
-            <input name="dir_name" placeholder="Dir" />
+            <input name="folder_name" placeholder="Folder" value="%s"/>
+            <input name="dir_name" placeholder="Dir" value="/" />
             <input name="file" type="file" />
-            <input type="submit" value="Upload"/></form>''')
+            <input type="submit" value="Upload"/></form>''' % folder_name)
 
     def post(self):
         storages = get_storages()

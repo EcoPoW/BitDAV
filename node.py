@@ -90,7 +90,7 @@ def main():
             # (r'.*', tornado.web.FallbackHandler, dict(fallback=tornado.wsgi.WSGIContainer(wsgi_app))),
         ], **settings)
 
-    server = tornado.httpserver.HTTPServer(application)
+    server = tornado.httpserver.HTTPServer(application, max_buffer_size=2**20*2000)
     server.listen(chain.current_port)
     tornado.ioloop.IOLoop.instance().start()
 
