@@ -33,10 +33,10 @@ def main():
             storages_path.append(storage_path)
 
             os.makedirs(os.path.join(storage_path, 'meta'), exist_ok=True)
-            for i in '0123456789abcdef':
-                for j in '0123456789abcdef':
-                    for k in '0123456789abcdef':
-                        os.makedirs(os.path.join(storage_path, 'blob', i+k+j), exist_ok=True)
+            # for i in '0123456789abcdef':
+            #     for j in '0123456789abcdef':
+            #         for k in '0123456789abcdef':
+            #             os.makedirs(os.path.join(storage_path, 'blob', i+k+j), exist_ok=True)
 
     nodes = storage_data['nodes']
 
@@ -68,7 +68,7 @@ def main():
                             print('download')
                         break
 
-    # get_blob
+    # /*get_blob
 
 
 if __name__ == '__main__':

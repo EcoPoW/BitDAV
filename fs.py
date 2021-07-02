@@ -70,8 +70,9 @@ class TestHandler(tornado.web.RequestHandler):
 class ListFoldersHandler(tornado.web.RequestHandler):
     def get(self):
         names = get_folders()
+        self.write('<a href="/*add_folder">Add Folder</a> <a href="/*update_storage">Add Storage</a><br>')
         for folder_name, folder_meta_hash in names.items():
-            self.write('<a href="/%s">%s<br>' % (folder_name, folder_name))
+            self.write('<a href="/%s">%s</a><br>' % (folder_name, folder_name))
         self.finish()
 
 
@@ -88,7 +89,7 @@ class ListFilesHandler(tornado.web.RequestHandler):
         # self.finish({'name': folder_name, 'meta_hash': folder_meta_hash})
 
         # folder_meta_hash = self.get_argument('folder_meta_hash')
-        self.write('<a href="/*upload_file?folder_name=%s">Add</a>' % (folder_name))
+        self.write('<a href="/*upload_file?folder_name=%s">Upload File</a>' % (folder_name))
         self.write('<h1>%s</h1>' % (folder_name))
 
         for storage_name, storage_payload in storages.items():
@@ -429,6 +430,13 @@ class UpdateStorageHandler(tornado.web.RequestHandler):
         node_name = self.get_argument('node_name', chain.current_name)
         group = self.get_argument('group')
         # print('storage_path', storage_path)
+
+        os.makedirs(os.path.join(storage_path, 'meta'), exist_ok=True)
+        os.makedirs(os.path.join(storage_path, 'blob'), exist_ok=True)
+        for i in '0123456789abcdef':
+            for j in '0123456789abcdef':
+                for k in '0123456789abcdef':
+                    os.makedirs(os.path.join(storage_path, 'blob', i+k+j), exist_ok=True)
 
         block_data = {'type': 'storage', 'name': storage_name, 'path': storage_path, 'node_name': node_name, 'group': group, 'timestamp': time.time()}
         block = chain.update_chain(block_data)
