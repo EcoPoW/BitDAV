@@ -398,6 +398,22 @@ class UpdateMetaHandler(tornado.web.RequestHandler):
             self.write('no storage config')
             raise tornado.web.HTTPError(500)
 
+        folder_meta_hash = self.get_argument('folder_meta_hash')
+        folder_meta_json = self.request.body
+        assert folder_meta_hash == hashlib.sha256(folder_meta_json).hexdigest()
+        folder_meta_data = tornado.escape.json_decode(folder_meta_json)
+        assert folder_meta_data['type'] == 'folder_meta'
+
+        for storage_path, _ in storages.values():
+            folder_meta_path = os.path.join(storage_path, 'meta', folder_meta_hash)
+            if not os.path.exists(folder_meta_path):
+                with open(folder_meta_path, 'wb') as f:
+                    f.write(folder_meta_json)
+                self.finish({})
+                # break
+        else:
+            raise tornado.web.HTTPError(404)
+
 
 class GetBlobHandler(tornado.web.RequestHandler):
     def get(self):
@@ -406,6 +422,17 @@ class GetBlobHandler(tornado.web.RequestHandler):
             self.write('no storage config')
             raise tornado.web.HTTPError(500)
 
+        file_blob_hash = self.get_argument('file_blob_hash')
+        for storage_path, _ in storages.values():
+            file_blob_path = os.path.join(storage_path, 'blob', file_blob_hash[:3], file_blob_hash)
+            if os.path.exists(file_blob_path):
+                with open(file_blob_path, 'rb') as f:
+                    file_blob_data = f.read()
+                    self.finish(file_blob_data)
+                break
+        else:
+            raise tornado.web.HTTPError(404)
+
 
 class UpdateBlobHandler(tornado.web.RequestHandler):
     def post(self):
@@ -413,6 +440,19 @@ class UpdateBlobHandler(tornado.web.RequestHandler):
         if not storages:
             self.write('no storage config')
             raise tornado.web.HTTPError(500)
+
+        file_blob_hash = self.get_argument('file_blob_hash')
+        file_blob_data = self.request.body
+        assert file_blob_hash == hashlib.sha256(file_blob_data).hexdigest()
+        for storage_path, _ in storages.values():
+            file_blob_path = os.path.join(storage_path, 'blob', file_blob_hash[:3], file_blob_hash)
+            if not os.path.exists(file_blob_path):
+                with open(file_blob_path, 'wb') as f:
+                    f.write(file_blob_data)
+                self.finish({})
+                break
+        else:
+            raise tornado.web.HTTPError(404)
 
 
 class UpdateStorageHandler(tornado.web.RequestHandler):

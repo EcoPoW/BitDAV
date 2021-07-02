@@ -116,7 +116,8 @@ def broadcast_block(new_block):
     names, pirmary = get_names()
     for name, info in names.items():
         host, port, pk = info
-        print('broadcast_block', host, port, name, new_block)
+        if setting.DEBUG_CHAIN:
+            print('broadcast_block', host, port, name, new_block)
         if name == current_name:
             continue
         try:
@@ -140,7 +141,8 @@ def ping():
     if current_name == pirmary and recent_election_block:
         print('ping broadcast', current_name, pirmary)
         # recent_block = get_chain()[-1]
-        broadcast_block(list(recent_election_block[1:]))
+        if setting.DEBUG_CHAIN:
+            broadcast_block(list(recent_election_block[1:]))
 
     is_election_required = False
     for name, info in names.items():

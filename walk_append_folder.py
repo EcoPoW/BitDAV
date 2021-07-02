@@ -55,12 +55,12 @@ if __name__ == '__main__':
     # else:
     #     folder_meta_data = {'type':'folder_meta', 'name': folder_name, 'items':[]}
 
-    os.makedirs(os.path.join(storage_path, 'meta'), exist_ok=True)
+    # os.makedirs(os.path.join(storage_path, 'meta'), exist_ok=True)
     # os.mkdir('%sblob/' % storage_path)
-    for i in '0123456789abcdef':
-        for j in '0123456789abcdef':
-            for k in '0123456789abcdef':
-                os.makedirs(os.path.join(storage_path, 'blob', '%s%s%s' % (i, k, j)), exist_ok=True)
+    # for i in '0123456789abcdef':
+    #     for j in '0123456789abcdef':
+    #         for k in '0123456789abcdef':
+    #             os.makedirs(os.path.join(storage_path, 'blob', '%s%s%s' % (i, k, j)), exist_ok=True)
 
     folder_meta_data = {'type':'folder_meta', 'name': folder_name, 'items':{}}
 
@@ -86,24 +86,18 @@ if __name__ == '__main__':
                     chunk_size = len(data)
                     file_size += chunk_size
                     print(chunk_hash, chunk_size)
-                    # chunks.append([chunk_hash, chunk_size, group0_device_no-len(group0_quota)])
                     file_chunks.append((chunk_hash, chunk_size))
-                    # write file
-                    blob_path = os.path.join(storage_path, 'blob', chunk_hash[:3], chunk_hash)
-                    with open(blob_path, 'wb') as fw:
-                        fw.write(data)
-                    # if quota < chunk_size:
-                    #     group0_current_device_index += 1
-                    #     quota = group0_quota[group0_current_device_index]
+                    # write file /*update_blob
+                    # blob_path = os.path.join(storage_path, 'blob', chunk_hash[:3], chunk_hash)
+                    # with open(blob_path, 'wb') as fw:
+                    #     fw.write(data)
+                    res = requests.post('http://%s/*update_blob?file_blob_hash=%s' % (ip_and_port, chunk_hash), data=data)
 
-                    # quota -= chunk_size
-                    # print('quota', group0_current_device_index, quota)
-
-            chunks_to_go, group0_quota_left = chunks_to_partition(file_chunks, group0_quota)
-            pprint.pprint(chunks_to_go)
+            # chunks_to_go, group0_quota_left = chunks_to_partition(file_chunks, group0_quota)
+            # pprint.pprint(chunks_to_go)
             chunks = []
             for chunk_hash, chunk_size in file_chunks:
-                chunks.append([chunk_hash, chunk_size, chunks_to_go[(chunk_hash, chunk_size)]])
+                chunks.append([chunk_hash, chunk_size, []])
 
             print('chunks', chunks, len(chunks))
             hash_list = mt_combine([c[0:1] for c in chunks], hashlib.sha256)
@@ -132,8 +126,10 @@ if __name__ == '__main__':
 
     folder_meta_json = json.dumps(folder_meta_data).encode()
     folder_meta_hash = hashlib.sha256(folder_meta_json).hexdigest()
-    with open(os.path.join(storage_path, 'meta', folder_meta_hash), 'wb') as f:
-        f.write(folder_meta_json)
+    # /*update_meta
+    # with open(os.path.join(storage_path, 'meta', folder_meta_hash), 'wb') as f:
+    #     f.write(folder_meta_json)
+    res = requests.post('http://%s/*update_meta?folder_meta_hash=%s' % (ip_and_port, folder_meta_hash), data=folder_meta_json)
     print('folder_meta_hash', folder_meta_hash, len(folder_meta_json))
 
     res = requests.post('http://%s/*update_folder' % ip_and_port, {'folder_name': folder_name, 'folder_meta_hash': folder_meta_hash})
