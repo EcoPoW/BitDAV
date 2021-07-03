@@ -182,6 +182,9 @@ class UploadFileHandler(tornado.web.RequestHandler):
                     break
 
         folder_name = self.get_argument('folder_name')
+        dir_name = self.get_argument('dir_name')
+        dir_name = dir_name.strip('/')
+        dir_name = dir_name + '/' if dir_name else dir_name
         folders = get_folders()
         folder_meta_hash = folders.get(folder_name, '')
 
@@ -248,7 +251,7 @@ class UploadFileHandler(tornado.web.RequestHandler):
 
                 file_meta_data = [merkle_root, len(body), time.time(), chunks]
                 # assert unique_name not in folder_meta_data['items']
-                folder_meta_data['items'][filename] = file_meta_data
+                folder_meta_data['items']['%s%s' % (dir_name, filename)] = file_meta_data
 
         folder_meta_json = tornado.escape.json_encode(folder_meta_data)
         folder_meta_hash = hashlib.sha256(folder_meta_json.encode('utf8')).hexdigest()
