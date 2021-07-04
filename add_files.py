@@ -23,8 +23,7 @@ def main():
     folder_name = folder_name.strip('/')
     dir_name = sys.argv[3] # classic/ or / by default
     dir_name = dir_name.strip('/')
-    if dir_name:
-        dir_name = '%s/' % dir_name
+    dir_name = '%s/' % dir_name if dir_name else ''
     print('files', sys.argv[4:])
 
     res = requests.get('http://%s/*get_storage' % ip_and_port)
@@ -40,20 +39,22 @@ def main():
     print('get_folder', res.json())
     folder_meta_hash = res.json()['meta_hash']
 
+    folder_meta_data = {'type':'folder_meta', 'name': folder_name, 'items':{}}
     if folder_meta_hash:
-        with open(os.path.join(storage_path, 'meta', folder_meta_hash), 'rb') as f:
-            folder_meta_json = f.read()
+        res = requests.get('http://%s/*get_meta?folder_meta_hash=%s' % (ip_and_port, folder_meta_hash))
+        if res.status_code == 200:
+            folder_meta_json = res.text
             folder_meta_data = json.loads(folder_meta_json)
-            assert folder_meta_data['type'] == 'folder_meta'
 
-    else:
-        folder_meta_data = {'type':'folder_meta', 'name': folder_name, 'items':{}}
+        # with open(os.path.join(storage_path, 'meta', folder_meta_hash), 'rb') as f:
+        #     folder_meta_json = f.read()
+        #     folder_meta_data = json.loads(folder_meta_json)
+        #     assert folder_meta_data['type'] == 'folder_meta'
 
     items_rename_counter = {}
     for file_name in sys.argv[4:]:
         file_chunks = []
         with open(file_name, 'rb') as f:
-            # group0 = []
             file_size = 0
 
             while True:
@@ -66,19 +67,13 @@ def main():
                 print(chunk_hash, chunk_size)
                 # chunks.append([chunk_hash, chunk_size, group0_device_no-len(group0_quota)])
                 file_chunks.append((chunk_hash, chunk_size))
+                # /*update_blob
+                res = requests.post('http://%s/*update_blob?file_blob_hash=%s' % (ip_and_port, chunk_hash), data=data)
                 # write file
-                blob_path = os.path.join(storage_path, 'blob', chunk_hash[:3], chunk_hash)
-                with open(blob_path, 'wb') as fw:
-                    fw.write(data)
-                # if quota < chunk_size:
-                #     group0_current_device_index += 1
-                #     quota = group0_quota[group0_current_device_index]
+                # blob_path = os.path.join(storage_path, 'blob', chunk_hash[:3], chunk_hash)
+                # with open(blob_path, 'wb') as fw:
+                #     fw.write(data)
 
-                # quota -= chunk_size
-                # print('quota', group0_current_device_index, quota)
-
-        # chunks_to_go, group0_quota_left = chunks_to_partition(file_chunks, group0_quota)
-        # pprint.pprint(chunks_to_go)
         chunks = []
         for chunk_hash, chunk_size in file_chunks:
             chunks.append([chunk_hash, chunk_size, []]) # chunks_to_go[(chunk_hash, chunk_size)]
@@ -109,8 +104,10 @@ def main():
 
     folder_meta_json = json.dumps(folder_meta_data).encode()
     folder_meta_hash = hashlib.sha256(folder_meta_json).hexdigest()
-    with open(os.path.join(storage_path, 'meta', folder_meta_hash), 'wb') as f:
-        f.write(folder_meta_json)
+    # /*update_meta
+    res = requests.post('http://%s/*update_meta?folder_meta_hash=%s' % (ip_and_port, folder_meta_hash), data=folder_meta_json)
+    # with open(os.path.join(storage_path, 'meta', folder_meta_hash), 'wb') as f:
+    #     f.write(folder_meta_json)
     print('folder_meta_hash', folder_meta_hash, len(folder_meta_json))
 
     res = requests.post('http://%s/*update_folder' % ip_and_port, {'folder_name': folder_name, 'folder_meta_hash': folder_meta_hash})

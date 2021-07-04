@@ -184,7 +184,7 @@ class UploadFileHandler(tornado.web.RequestHandler):
         folder_name = self.get_argument('folder_name')
         dir_name = self.get_argument('dir_name')
         dir_name = dir_name.strip('/')
-        dir_name = dir_name + '/' if dir_name else dir_name
+        dir_name = '%s/' % dir_name if dir_name else ''
         folders = get_folders()
         folder_meta_hash = folders.get(folder_name, '')
 

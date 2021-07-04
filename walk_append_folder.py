@@ -87,14 +87,13 @@ if __name__ == '__main__':
                     file_size += chunk_size
                     print(chunk_hash, chunk_size)
                     file_chunks.append((chunk_hash, chunk_size))
-                    # write file /*update_blob
+                    # /*update_blob
+                    res = requests.post('http://%s/*update_blob?file_blob_hash=%s' % (ip_and_port, chunk_hash), data=data)
+                    # write file 
                     # blob_path = os.path.join(storage_path, 'blob', chunk_hash[:3], chunk_hash)
                     # with open(blob_path, 'wb') as fw:
                     #     fw.write(data)
-                    res = requests.post('http://%s/*update_blob?file_blob_hash=%s' % (ip_and_port, chunk_hash), data=data)
 
-            # chunks_to_go, group0_quota_left = chunks_to_partition(file_chunks, group0_quota)
-            # pprint.pprint(chunks_to_go)
             chunks = []
             for chunk_hash, chunk_size in file_chunks:
                 chunks.append([chunk_hash, chunk_size, []])
@@ -127,9 +126,9 @@ if __name__ == '__main__':
     folder_meta_json = json.dumps(folder_meta_data).encode()
     folder_meta_hash = hashlib.sha256(folder_meta_json).hexdigest()
     # /*update_meta
+    res = requests.post('http://%s/*update_meta?folder_meta_hash=%s' % (ip_and_port, folder_meta_hash), data=folder_meta_json)
     # with open(os.path.join(storage_path, 'meta', folder_meta_hash), 'wb') as f:
     #     f.write(folder_meta_json)
-    res = requests.post('http://%s/*update_meta?folder_meta_hash=%s' % (ip_and_port, folder_meta_hash), data=folder_meta_json)
     print('folder_meta_hash', folder_meta_hash, len(folder_meta_json))
 
     res = requests.post('http://%s/*update_folder' % ip_and_port, {'folder_name': folder_name, 'folder_meta_hash': folder_meta_hash})
