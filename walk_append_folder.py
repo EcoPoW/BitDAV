@@ -44,25 +44,16 @@ if __name__ == '__main__':
             storage_path = storage_payload[0]
             break
 
-    # folder_meta_hash = res.json()['meta_hash']
-
-    # if folder_meta_hash:
-    #     with open('pc1/meta/%s' % folder_meta_hash, 'rb') as f:
-    #         folder_meta_json = f.read()
-    #         folder_meta_data = json.loads(folder_meta_json)
-    #         assert folder_meta_data['type'] == 'folder_meta'
-
-    # else:
-    #     folder_meta_data = {'type':'folder_meta', 'name': folder_name, 'items':[]}
-
-    # os.makedirs(os.path.join(storage_path, 'meta'), exist_ok=True)
-    # os.mkdir('%sblob/' % storage_path)
-    # for i in '0123456789abcdef':
-    #     for j in '0123456789abcdef':
-    #         for k in '0123456789abcdef':
-    #             os.makedirs(os.path.join(storage_path, 'blob', '%s%s%s' % (i, k, j)), exist_ok=True)
+    res = requests.get('http://%s/*get_folder?folder_name=%s' % (ip_and_port, urllib.parse.quote(folder_name)))
+    print('get_folder', res.json())
+    folder_meta_hash = res.json()['meta_hash']
 
     folder_meta_data = {'type':'folder_meta', 'name': folder_name, 'items':{}}
+    if folder_meta_hash:
+        res = requests.get('http://%s/*get_meta?folder_meta_hash=%s' % (ip_and_port, folder_meta_hash))
+        if res.status_code == 200:
+            folder_meta_json = res.text
+            folder_meta_data = json.loads(folder_meta_json)
 
     for root, dirs, files in os.walk(folder_path):
         for fname in files:
@@ -88,7 +79,13 @@ if __name__ == '__main__':
                     print(chunk_hash, chunk_size)
                     file_chunks.append((chunk_hash, chunk_size))
                     # /*update_blob
-                    res = requests.post('http://%s/*update_blob?file_blob_hash=%s' % (ip_and_port, chunk_hash), data=data)
+                    while True:
+                        try:
+                            res = requests.post('http://%s/*update_blob?file_blob_hash=%s' % (ip_and_port, chunk_hash), data=data)
+                            break
+                        except requests.exceptions.ConnectionError:
+                            print('retry %s' % chunk_hash)
+                            time.sleep(1)
                     # write file 
                     # blob_path = os.path.join(storage_path, 'blob', chunk_hash[:3], chunk_hash)
                     # with open(blob_path, 'wb') as fw:

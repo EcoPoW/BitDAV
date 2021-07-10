@@ -68,7 +68,13 @@ def main():
                 # chunks.append([chunk_hash, chunk_size, group0_device_no-len(group0_quota)])
                 file_chunks.append((chunk_hash, chunk_size))
                 # /*update_blob
-                res = requests.post('http://%s/*update_blob?file_blob_hash=%s' % (ip_and_port, chunk_hash), data=data)
+                while True:
+                    try:
+                        res = requests.post('http://%s/*update_blob?file_blob_hash=%s' % (ip_and_port, chunk_hash), data=data)
+                        break
+                    except requests.exceptions.ConnectionError:
+                        print('retry %s' % chunk_hash)
+                        time.sleep(1)
                 # write file
                 # blob_path = os.path.join(storage_path, 'blob', chunk_hash[:3], chunk_hash)
                 # with open(blob_path, 'wb') as fw:
