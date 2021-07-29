@@ -56,8 +56,8 @@ def get_storages(reload=False):
                 name = block_data['name']
                 path = block_data.get('path', '')
                 node_name = block_data.get('node_name', '')
-                # if name:
-                storage_names[name] = [path, node_name]
+                group = block_data.get('group', '')
+                storage_names[name] = [path, node_name, group]
     print('get_storages', storage_names)
     return storage_names
 
@@ -381,7 +381,7 @@ class GetMetaHandler(tornado.web.RequestHandler):
             raise tornado.web.HTTPError(500)
 
         folder_meta_hash = self.get_argument('folder_meta_hash')
-        for storage_path, _ in storages.values():
+        for storage_path, node_name, group in storages.values():
             folder_meta_path = os.path.join(storage_path, 'meta', folder_meta_hash)
             if os.path.exists(folder_meta_path):
                 with open(folder_meta_path, 'rb') as f:
@@ -407,7 +407,7 @@ class UpdateMetaHandler(tornado.web.RequestHandler):
         folder_meta_data = tornado.escape.json_decode(folder_meta_json)
         assert folder_meta_data['type'] == 'folder_meta'
 
-        for storage_path, _ in storages.values():
+        for storage_path, _, _ in storages.values():
             folder_meta_path = os.path.join(storage_path, 'meta', folder_meta_hash)
             if not os.path.exists(folder_meta_path):
                 with open(folder_meta_path, 'wb') as f:
@@ -426,7 +426,7 @@ class GetBlobHandler(tornado.web.RequestHandler):
             raise tornado.web.HTTPError(500)
 
         file_blob_hash = self.get_argument('file_blob_hash')
-        for storage_path, _ in storages.values():
+        for storage_path, _, _ in storages.values():
             file_blob_path = os.path.join(storage_path, 'blob', file_blob_hash[:3], file_blob_hash)
             if os.path.exists(file_blob_path):
                 with open(file_blob_path, 'rb') as f:
@@ -461,11 +461,12 @@ class UpdateBlobHandler(tornado.web.RequestHandler):
 class UpdateStorageHandler(tornado.web.RequestHandler):
     def get(self):
         storages = get_storages()
-        self.write('''%s<br><form method="POST">
+        self.write('%s<br>' % storages)
+        self.write('''<form method="POST">
             <input name="storage_name" placeholder="Storage Name" />
             <input name="storage_path" placeholder="Storage Path" />
             <input name="group" placeholder="Group 0 or 1" />
-            <input type="submit" value="Update" /></form>''' % storages)
+            <input type="submit" value="Update" /></form>''')
 
     def post(self):
         storage_name = self.get_argument('storage_name')
@@ -489,7 +490,7 @@ class UpdateStorageHandler(tornado.web.RequestHandler):
 
 class GetStorageHandler(tornado.web.RequestHandler):
     def get(self):
-        result = {'storages':{}, 'node_name': chain.current_name, 'nodes':{}}
+        result = {'storages':{}, 'remote_storages':{}, 'node_name': chain.current_name, 'nodes':{}}
         storages = get_storages()
         for storage_name, storage_payload in storages.items():
             storage_path = storage_payload[0]
@@ -501,6 +502,8 @@ class GetStorageHandler(tornado.web.RequestHandler):
             if node_name == chain.current_name:
                 disk = shutil.disk_usage(storage_path)
                 result['storages'][storage_name] = [storage_path, node_name, group, disk.free]
+            else:
+                result['remote_storages'][storage_name] = [storage_path, node_name, group]
 
         names, pirmary = chain.get_names()
         for name, info in names.items():
