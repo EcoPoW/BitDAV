@@ -70,7 +70,7 @@ class TestHandler(tornado.web.RequestHandler):
 class ListFoldersHandler(tornado.web.RequestHandler):
     def get(self):
         names = get_folders()
-        self.write('<a href="/*add_folder">Add Folder</a> <a href="/*update_storage">Add Storage</a><br>')
+        self.write('<a href="/*add_folder">Add Folder</a> <a href="/*update_storage">Add Storage</a><br><br>')
         for folder_name, folder_meta_hash in names.items():
             self.write('<a href="/%s">%s</a><br>' % (folder_name, folder_name))
         self.finish()
