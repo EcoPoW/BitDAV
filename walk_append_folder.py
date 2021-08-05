@@ -105,7 +105,7 @@ if __name__ == '__main__':
 
             while True:
                 name, ext = os.path.splitext(f.name)
-                relative_path = (os.path.relpath(root, folder_path).rstrip('\\')+'/').lstrip('./')
+                relative_path = (os.path.relpath(root, folder_path).replace('\\', '/')+'/').lstrip('./')
                 unique_name = "%s%s%s%s" % (relative_path, os.path.basename(name), items_rename_counter.get(name, ''), ext)
                 if unique_name not in folder_meta_data['items']:
                     break
