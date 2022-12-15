@@ -141,8 +141,7 @@ def ping():
     if current_name == pirmary and recent_election_block:
         print('ping broadcast', current_name, pirmary)
         # recent_block = get_chain()[-1]
-        if setting.DEBUG_CHAIN:
-            broadcast_block(list(recent_election_block[1:]))
+        broadcast_block(list(recent_election_block[1:]))
 
     is_election_required = False
     for name, info in names.items():
@@ -350,6 +349,8 @@ class ElectionHandler(tornado.web.RequestHandler):
         self.received_election.setdefault(block_data_json, {})
         self.received_election[block_data_json][node_name] = sig
         print('ElectionHandler', self.received_election)
+        print('ElectionHandler', self.received_election[block_data_json].keys())
+        print('ElectionHandler', set(all_names), failed_names)
         assert set(self.received_election[block_data_json].keys()) == set(all_names) - failed_names
 
         assert set(msg['failed']) == failed_names
