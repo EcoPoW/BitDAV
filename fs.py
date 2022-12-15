@@ -70,7 +70,7 @@ class TestHandler(tornado.web.RequestHandler):
 class ListFoldersHandler(tornado.web.RequestHandler):
     def get(self):
         names = get_folders()
-        self.write('<a href="/*add_folder">Add Folder</a> <a href="/*update_storage">Add Storage</a><br>')
+        self.write('<a href="/*add_folder">Add Folder</a> <a href="/*update_storage">Add Storage</a><br><br>')
         for folder_name, folder_meta_hash in names.items():
             self.write('<a href="/%s">%s</a><br>' % (folder_name, folder_name))
         self.finish()
@@ -83,15 +83,17 @@ class ListFilesHandler(tornado.web.RequestHandler):
             self.write('no storage config')
             raise tornado.web.HTTPError(500)
 
-        # folder_name = self.get_argument('folder_name')
+        output_type = self.get_argument('type', None)
         names = get_folders()
         folder_meta_hash = names.get(folder_name, '')
         # self.finish({'name': folder_name, 'meta_hash': folder_meta_hash})
 
         # folder_meta_hash = self.get_argument('folder_meta_hash')
-        self.write('<a href="/*upload_file?folder_name=%s">Upload File</a>' % (folder_name))
-        self.write('<h1>%s</h1>' % (folder_name))
+        if not output_type:
+            self.write('<a href="/*upload_file?folder_name=%s">Upload File</a>' % (folder_name))
+            self.write('<h1>%s</h1>' % (folder_name))
 
+        files = []
         for storage_name, storage_payload in storages.items():
             storage_path = storage_payload[0]
             node_name = storage_payload[1]
@@ -103,9 +105,14 @@ class ListFilesHandler(tornado.web.RequestHandler):
                         folder_meta_data = tornado.escape.json_decode(folder_meta_json)
                         assert folder_meta_data['type'] == 'folder_meta'
                         for file_name in folder_meta_data.get('items', {}):
-                            self.write('<a href="/%s/%s">%s</a><br>' % (folder_name, file_name, file_name))
+                            if output_type == 'json':
+                                files.append('/%s/%s' % (folder_name, file_name))
+                            else:
+                                self.write('<a href="/%s/%s">%s</a><br>' % (folder_name, file_name, file_name))
                         break
 
+        if output_type == 'json':
+            self.finish({'files': files})
 
 class GetFileHandler(tornado.web.RequestHandler):
     @tornado.gen.coroutine
